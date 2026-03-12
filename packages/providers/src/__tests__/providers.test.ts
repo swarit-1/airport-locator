@@ -17,6 +17,8 @@ describe('MockTrafficProvider', () => {
     expect(result.duration_in_traffic_minutes).toBeGreaterThanOrEqual(result.duration_minutes);
     expect(result.distance_km).toBeGreaterThan(0);
     expect(result.source).toBe('mock');
+    expect(result.source_name).toBe('Deterministic traffic model');
+    expect(result.source_type).toBe('mock');
     expect(result.fetched_at).toBeDefined();
   });
 
@@ -46,9 +48,14 @@ describe('MockFlightProvider', () => {
     expect(info).not.toBeNull();
     expect(info!.airline_iata).toBe('AA');
     expect(info!.flight_number).toBe('1234');
+    expect(info!.departure_airport).toBe('DFW');
+    expect(info!.departure_airport_name).toContain('Dallas');
+    expect(info!.departure_timezone).toBe('America/Chicago');
     expect(info!.terminal).toBeDefined();
     expect(info!.gate).toBeDefined();
     expect(info!.source).toBe('mock');
+    expect(info!.source_name).toBe('Deterministic flight schedule');
+    expect(info!.source_type).toBe('mock');
   });
 
   it('generates plausible flight for unknown flights', async () => {
@@ -56,6 +63,8 @@ describe('MockFlightProvider', () => {
     expect(info).not.toBeNull();
     expect(info!.airline_iata).toBe('XY');
     expect(info!.flight_number).toBe('9999');
+    expect(info!.departure_airport).toMatch(/^[A-Z]{3}$/);
+    expect(info!.departure_timezone).toBeTruthy();
   });
 });
 

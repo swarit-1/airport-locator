@@ -2,7 +2,9 @@ node_modules/
 .next/
 dist/
 .turbo/
+.playwright-cli/
 .env
 .env.local
 *.log
+*.tsbuildinfo
 .DS_Store

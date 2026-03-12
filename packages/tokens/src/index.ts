@@ -64,7 +64,8 @@ export const colors = {
 // ─── Typography ───────────────────────────────────────────────────────
 export const typography = {
   fontFamily: {
-    sans: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    sans: '"Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    display: '"Newsreader", Georgia, serif',
     mono: '"JetBrains Mono", "Fira Code", monospace',
   },
   fontSize: {

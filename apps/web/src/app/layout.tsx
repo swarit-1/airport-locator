@@ -2,12 +2,12 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'GateShare — Never miss a flight, share the ride',
+  title: 'GateShare — never miss a flight again',
   description:
-    'Know exactly when to leave for the airport. Find travel companions heading your way and split the ride.',
+    'Know when to leave, understand why, and coordinate a shared airport ride without gambling on the timing.',
   openGraph: {
     title: 'GateShare',
-    description: 'Know when to leave. Share the ride.',
+    description: 'never miss a flight again',
     type: 'website',
   },
 };

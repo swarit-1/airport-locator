@@ -1,54 +1,120 @@
-import Link from 'next/link';
-import { Clock, MapPin, Shield, ArrowRight } from 'lucide-react';
+'use client';
 
-// In production, this would fetch the recommendation by ID from Supabase
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { Clock, MapPin, Shield, ArrowRight, Copy } from 'lucide-react';
+import { getShareRepo } from '@/lib/repositories';
+import { useHydrated } from '@/hooks/use-hydrated';
+
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
 export default function SharePage({ params }: { params: { id: string } }) {
+  const hydrated = useHydrated();
+  const shareRepo = getShareRepo();
+  const [recommendation, setRecommendation] = useState<ReturnType<typeof shareRepo.getRecommendation>>();
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    setRecommendation(shareRepo.getRecommendation(params.id));
+  }, [hydrated, params.id, shareRepo]);
+
+  if (!hydrated) {
+    return <div className="min-h-dvh bg-surface-primary" />;
+  }
+
+  if (!recommendation) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center bg-surface-primary">
+        <div className="text-center">
+          <h1 className="text-xl font-bold text-ink-900">Recommendation not found</h1>
+          <p className="mt-2 text-sm text-ink-500">Open a trip in GateShare first, then share that recommendation.</p>
+          <Link href="/trip/new" className="gs-btn-primary mt-5">Plan a trip</Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-dvh bg-surface-primary">
       <div className="bg-brand-500 text-white">
-        <div className="gs-container py-12 text-center">
-          <p className="text-sm font-medium text-white/70">GateShare Recommendation</p>
-          <h1 className="mt-2 text-4xl font-extrabold tracking-tight sm:text-5xl">
-            Leave by 11:15 AM
+        <div className="gs-container py-12 sm:py-16">
+          <p className="text-sm font-medium text-white/70">Shared from GateShare</p>
+          <h1 className="mt-3 text-4xl font-extrabold tracking-tight sm:text-6xl">
+            Leave by {formatTime(recommendation.recommended_leave_time)}
           </h1>
-          <p className="mt-3 text-base text-white/80">
-            Window: 10:55 AM – 11:25 AM
+          <p className="mt-3 max-w-2xl text-base leading-relaxed text-white/80">
+            {recommendation.summary}
           </p>
-          <div className="mt-4 flex justify-center gap-3">
+          <div className="mt-5 flex flex-wrap gap-3">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-sm">
-              American 1234
+              {recommendation.airline_name} {recommendation.flight_number}
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-sm">
-              SEA · 2:30 PM
+              {recommendation.airport_iata} · {recommendation.departure_date} · {recommendation.departure_time}
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-green-400/20 text-green-100 px-3 py-1 text-sm font-semibold">
-              High confidence
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-sm font-semibold capitalize">
+              {recommendation.confidence} confidence
             </span>
           </div>
         </div>
       </div>
 
       <div className="gs-container py-8">
-        <div className="grid gap-4 sm:grid-cols-3 max-w-2xl mx-auto">
-          <div className="rounded-xl bg-surface-secondary p-4 text-center">
-            <Clock className="mx-auto h-5 w-5 text-ink-400 mb-1" />
-            <div className="text-lg font-bold text-ink-900">11:45 AM</div>
-            <div className="text-xs text-ink-500">Curb arrival</div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="rounded-2xl bg-surface-secondary p-5">
+            <Clock className="h-5 w-5 text-ink-400" />
+            <div className="mt-4 text-2xl font-semibold text-ink-900">{formatTime(recommendation.recommended_curb_arrival)}</div>
+            <div className="mt-1 text-sm text-ink-500">Arrive at the curb</div>
           </div>
-          <div className="rounded-xl bg-surface-secondary p-4 text-center">
-            <Shield className="mx-auto h-5 w-5 text-ink-400 mb-1" />
-            <div className="text-lg font-bold text-ink-900">12:30 PM</div>
-            <div className="text-xs text-ink-500">Through security</div>
+          <div className="rounded-2xl bg-surface-secondary p-5">
+            <Shield className="h-5 w-5 text-ink-400" />
+            <div className="mt-4 text-2xl font-semibold text-ink-900">{formatTime(recommendation.latest_safe_security_entry)}</div>
+            <div className="mt-1 text-sm text-ink-500">Be entering security by</div>
           </div>
-          <div className="rounded-xl bg-surface-secondary p-4 text-center">
-            <MapPin className="mx-auto h-5 w-5 text-ink-400 mb-1" />
-            <div className="text-lg font-bold text-ink-900">1:00 PM</div>
-            <div className="text-xs text-ink-500">At gate</div>
+          <div className="rounded-2xl bg-surface-secondary p-5">
+            <MapPin className="h-5 w-5 text-ink-400" />
+            <div className="mt-4 text-2xl font-semibold text-ink-900">{formatTime(recommendation.latest_safe_gate_arrival)}</div>
+            <div className="mt-1 text-sm text-ink-500">Reach your gate by</div>
+          </div>
+        </div>
+
+        <div className="mt-8 rounded-3xl border border-ink-200 bg-white p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-ink-900">Why this timing works</h2>
+              <p className="mt-1 text-sm text-ink-500">Built from traffic, wait times, bag rules, and your risk profile.</p>
+            </div>
+            <button
+              onClick={async () => {
+                await navigator.clipboard.writeText(window.location.href);
+                setCopied(true);
+                window.setTimeout(() => setCopied(false), 1500);
+              }}
+              className="gs-btn-secondary gap-2 !px-4 !py-2 text-sm"
+            >
+              <Copy className="h-4 w-4" />
+              {copied ? 'Link copied' : 'Copy share link'}
+            </button>
+          </div>
+
+          <div className="mt-6 space-y-3">
+            {recommendation.breakdown.map((item) => (
+              <div key={`${item.label}-${item.minutes}`} className="grid gap-2 rounded-2xl bg-surface-secondary px-4 py-3 sm:grid-cols-[1fr_auto] sm:items-center">
+                <div>
+                  <div className="text-sm font-semibold text-ink-900">{item.label}</div>
+                  <div className="text-xs text-ink-500">{item.description}</div>
+                </div>
+                <div className="text-sm font-semibold text-brand-600">{item.minutes} min</div>
+              </div>
+            ))}
           </div>
         </div>
 
         <div className="mt-12 text-center">
-          <p className="text-ink-500">Want your own personalized airport timing?</p>
+          <p className="text-sm text-ink-500">Want your own personalized leave time and ride circles?</p>
           <Link href="/trip/new" className="gs-btn-primary mt-4 gap-2">
             Plan your trip
             <ArrowRight className="h-5 w-5" />

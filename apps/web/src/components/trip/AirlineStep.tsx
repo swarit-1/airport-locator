@@ -1,100 +1,114 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plane, Search } from 'lucide-react';
+import { ArrowRight, Search } from 'lucide-react';
 import { StepShell } from './StepShell';
-import type { DemoAirline } from '@/lib/demo-data';
+import type { AirlineRule } from '@/lib/repositories';
 
 interface AirlineStepProps {
-  airlines: DemoAirline[];
+  airlines: AirlineRule[];
   selected: string;
   onSelect: (iata: string, name: string) => void;
 }
 
-const AIRLINE_COLORS: Record<string, string> = {
-  AA: 'bg-red-50 border-red-200 text-red-700',
-  DL: 'bg-blue-50 border-blue-200 text-blue-700',
-  UA: 'bg-indigo-50 border-indigo-200 text-indigo-700',
-  WN: 'bg-amber-50 border-amber-200 text-amber-700',
-};
-
-const AIRLINE_ACCENT: Record<string, string> = {
-  AA: 'bg-red-500',
-  DL: 'bg-blue-600',
-  UA: 'bg-indigo-600',
-  WN: 'bg-amber-500',
+const AIRLINE_TONES: Record<string, string> = {
+  AA: 'bg-[#f5e8e4] text-[#8f3d24]',
+  DL: 'bg-[#e8efff] text-[#234cb7]',
+  UA: 'bg-[#e8ecf4] text-[#274168]',
+  WN: 'bg-[#fbf0dc] text-[#9b5a08]',
 };
 
 export function AirlineStep({ airlines, selected, onSelect }: AirlineStepProps) {
   const [search, setSearch] = useState('');
-  const filtered = airlines.filter(
-    (a) =>
-      a.name.toLowerCase().includes(search.toLowerCase()) ||
-      a.iata_code.toLowerCase().includes(search.toLowerCase()),
+
+  const filtered = useMemo(
+    () => airlines.filter((airline) =>
+      airline.name.toLowerCase().includes(search.toLowerCase()) ||
+      airline.iata_code.toLowerCase().includes(search.toLowerCase()),
+    ),
+    [airlines, search],
   );
 
   return (
     <StepShell
       title="Which airline are you travelling with?"
-      subtitle="We'll use this to look up bag rules and boarding times."
+      subtitle="We start with the carrier because its bag cutoff, boarding cadence, and gate-close rules shape the whole leave-time recommendation."
       step={1}
     >
-      {/* Search */}
-      <div className="relative mb-6">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-ink-400" />
-        <input
-          type="text"
-          placeholder="Search airlines..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="gs-input pl-12"
-          autoFocus
-        />
-      </div>
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_15rem] lg:items-start">
+        <div>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+            <input
+              type="text"
+              placeholder="Search Delta, United, Southwest..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="gs-input !h-14 !rounded-full !border-black/8 !bg-white/80 !pl-11 !shadow-none"
+              autoFocus
+            />
+          </div>
 
-      {/* Airline list */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        {filtered.map((airline, i) => (
-          <motion.button
-            key={airline.iata_code}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05, duration: 0.25 }}
-            onClick={() => onSelect(airline.iata_code, airline.name)}
-            className={`group flex items-center gap-4 rounded-xl border-2 p-4 text-left transition-all duration-150
-              ${
-                selected === airline.iata_code
-                  ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-500/20'
-                  : 'border-ink-100 bg-surface-primary hover:border-ink-200 hover:shadow-sm'
-              }
-            `}
-          >
-            <div
-              className={`flex h-12 w-12 items-center justify-center rounded-lg border ${
-                AIRLINE_COLORS[airline.iata_code] ?? 'bg-ink-50 border-ink-200 text-ink-600'
-              }`}
-            >
-              <span className="text-sm font-bold">{airline.iata_code}</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-ink-900">{airline.name}</div>
-              <div className="flex items-center gap-2 mt-0.5">
-                <div className={`h-1 w-6 rounded-full ${AIRLINE_ACCENT[airline.iata_code] ?? 'bg-ink-300'}`} />
-                <span className="text-xs text-ink-400">{airline.iata_code}</span>
-              </div>
-            </div>
-            <Plane className="h-5 w-5 text-ink-300 group-hover:text-ink-500 transition-colors" />
-          </motion.button>
-        ))}
-      </div>
+          <div className="mt-6 overflow-hidden rounded-[2rem] border border-black/6 bg-white/78 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
+            {filtered.map((airline, index) => (
+              <motion.button
+                key={airline.iata_code}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.24, delay: index * 0.025 }}
+                onClick={() => onSelect(airline.iata_code, airline.name)}
+                className={`grid w-full gap-4 border-b border-black/6 px-5 py-4 text-left transition-colors last:border-b-0 sm:grid-cols-[6rem_minmax(0,1fr)_auto] sm:items-center ${
+                  selected === airline.iata_code ? 'bg-brand-50/70' : 'hover:bg-black/[0.02]'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-11 min-w-11 items-center justify-center rounded-full text-sm font-bold ${AIRLINE_TONES[airline.iata_code] ?? 'bg-black/5 text-ink-700'}`}>
+                    {airline.iata_code}
+                  </div>
+                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-400 sm:hidden">
+                    Airline
+                  </span>
+                </div>
 
-      {filtered.length === 0 && (
-        <div className="mt-8 text-center">
-          <p className="text-ink-500">No airlines found for &ldquo;{search}&rdquo;</p>
-          <p className="mt-1 text-sm text-ink-400">Try a different search or select from the list above</p>
+                <div className="min-w-0">
+                  <div className="text-lg font-semibold tracking-tight text-ink-900">
+                    {airline.name}
+                  </div>
+                  <div className="mt-1 text-sm text-ink-500">
+                    Live flight lookup when available. Manual fallback if not.
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 text-sm font-semibold text-ink-500">
+                  <span>{selected === airline.iata_code ? 'Selected' : 'Choose'}</span>
+                  <ArrowRight className="h-4 w-4" />
+                </div>
+              </motion.button>
+            ))}
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="mt-6 rounded-[1.75rem] border border-dashed border-black/10 px-5 py-8 text-center text-sm text-ink-500">
+              No airline matched “{search}”. Try the carrier name or two-letter IATA code.
+            </div>
+          ) : null}
         </div>
-      )}
+
+        <div className="rounded-[2rem] border border-black/6 bg-white/72 p-6">
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">
+            Why this step exists
+          </div>
+          <div className="mt-4 space-y-4 text-sm leading-relaxed text-ink-600">
+            <p>
+              Airline policy is the first hard constraint. Checked bags and gate-close times move the entire airport timeline earlier.
+            </p>
+            <p>
+              After you pick the carrier, GateShare can try to resolve the flight number and prefill the rest of the trip.
+            </p>
+          </div>
+        </div>
+      </div>
     </StepShell>
   );
 }

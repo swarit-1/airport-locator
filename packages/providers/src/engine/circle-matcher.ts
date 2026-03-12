@@ -6,6 +6,7 @@ export interface CircleCandidate {
   targetLeaveTime: Date;
   leaveWindowStart: Date;
   leaveWindowEnd: Date;
+  latestSafeLeaveTime?: Date;
   approximateOrigin: GeoPoint;
   proximityRadiusKm: number;
   maxDetourMinutes: number;
@@ -21,7 +22,7 @@ export interface MatchRequest {
   targetLeaveTime: Date;
   leaveWindowStart: Date;
   leaveWindowEnd: Date;
-  latestSafeArrival: Date;
+  latestSafeLeaveTime: Date;
   communityId: string | null;
   maxDetourMinutes: number;
 }
@@ -65,12 +66,9 @@ export class CircleMatcher {
       if (estimatedDetourMinutes > request.maxDetourMinutes) continue;
       if (estimatedDetourMinutes > candidate.maxDetourMinutes) continue;
 
-      // Rule: reject if detour puts user's safe arrival at risk
-      const adjustedArrival = new Date(
-        candidate.targetLeaveTime.getTime() + estimatedDetourMinutes * 60_000,
-      );
-      // This is a simplified check - in production we'd recompute the full recommendation
-      if (adjustedArrival > request.latestSafeArrival) continue;
+      const detouredLeaveTime = new Date(candidate.targetLeaveTime.getTime() + estimatedDetourMinutes * 60_000);
+      if (!preservesSafeLeaveTime(detouredLeaveTime, request.latestSafeLeaveTime)) continue;
+      if (candidate.latestSafeLeaveTime && !preservesSafeLeaveTime(detouredLeaveTime, candidate.latestSafeLeaveTime)) continue;
 
       // Score: safety first, then savings, then convenience
       const safetyScore = computeSafetyScore(estimatedDetourMinutes, request.maxDetourMinutes);
@@ -102,6 +100,10 @@ export class CircleMatcher {
     // Sort by score descending, prefer smaller circles
     return results.sort((a, b) => b.score - a.score);
   }
+}
+
+function preservesSafeLeaveTime(proposedLeaveTime: Date, latestSafeLeaveTime: Date): boolean {
+  return proposedLeaveTime.getTime() <= latestSafeLeaveTime.getTime();
 }
 
 function computeSafetyScore(detourMinutes: number, maxDetour: number): number {

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { Users, Clock, MapPin, Plus, Zap, Globe, Lock, GraduationCap, DollarSign } from 'lucide-react';
-import { demoCircles } from '@/lib/demo-data';
+import { Users, Clock, MapPin, Plus, Zap, Globe, Lock, GraduationCap, DollarSign, ArrowUpRight } from 'lucide-react';
+import { getCircleRepo } from '@/lib/repositories';
+import { useHydrated } from '@/hooks/use-hydrated';
 
 type Filter = 'all' | 'scheduled' | 'leaving_now';
 
@@ -23,120 +24,138 @@ const visibilityIcons = {
 };
 
 export default function CirclesPage() {
+  const hydrated = useHydrated();
+  const circleRepo = getCircleRepo();
   const [filter, setFilter] = useState<Filter>('all');
-  const filtered = demoCircles.filter(
-    (c) => filter === 'all' || c.circle_type === filter,
+  const [circles, setCircles] = useState<ReturnType<typeof circleRepo.getAll>>([]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    setCircles(circleRepo.getAll().sort((a, b) => new Date(a.target_leave_time).getTime() - new Date(b.target_leave_time).getTime()));
+  }, [circleRepo, hydrated]);
+
+  const filtered = useMemo(
+    () => circles.filter((circle) => filter === 'all' || circle.circle_type === filter),
+    [circles, filter],
   );
+
+  if (!hydrated) {
+    return <div className="min-h-dvh bg-surface-primary" />;
+  }
 
   return (
     <div className="min-h-dvh bg-surface-primary">
-      {/* Header */}
-      <header className="border-b border-ink-100 bg-surface-primary/80 backdrop-blur-md sticky top-0 z-10">
-        <div className="gs-container flex items-center justify-between py-4">
+      <header className="border-b border-ink-100 bg-surface-primary/90 backdrop-blur-md sticky top-0 z-10">
+        <div className="gs-container flex items-end justify-between gap-4 py-4">
           <div>
             <Link href="/" className="text-sm text-ink-400 hover:text-ink-600 transition-colors">
               GateShare
             </Link>
-            <h1 className="text-xl font-bold text-ink-900">Ride Circles</h1>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink-900">Ride circles</h1>
+            <p className="mt-1 text-sm text-ink-500">Find coordinated rides that still protect everyone’s airport timing.</p>
           </div>
           <Link href="/circles/new" className="gs-btn-primary gap-2 text-sm !px-4 !py-2">
             <Plus className="h-4 w-4" />
-            New circle
+            Create a circle
           </Link>
         </div>
       </header>
 
       <div className="gs-container py-6">
-        {/* Filters */}
-        <div className="flex gap-2 mb-6">
+        <div className="mb-6 flex flex-wrap gap-2">
           {([
-            { value: 'all', label: 'All' },
+            { value: 'all', label: 'All circles' },
             { value: 'scheduled', label: 'Scheduled' },
             { value: 'leaving_now', label: 'Leaving now' },
-          ] as const).map((f) => (
+          ] as const).map((item) => (
             <button
-              key={f.value}
-              onClick={() => setFilter(f.value)}
-              className={`gs-chip ${filter === f.value ? 'gs-chip-active' : ''}`}
+              key={item.value}
+              onClick={() => setFilter(item.value)}
+              className={`gs-chip ${filter === item.value ? 'gs-chip-active' : ''}`}
             >
-              {f.value === 'leaving_now' && <Zap className="h-3.5 w-3.5" />}
-              {f.label}
+              {item.value === 'leaving_now' && <Zap className="h-3.5 w-3.5" />}
+              {item.label}
             </button>
           ))}
         </div>
 
-        {/* Circle list */}
-        <div className="space-y-4">
-          {filtered.map((circle, i) => {
-            const VisIcon = visibilityIcons[circle.visibility];
+        <div className="overflow-hidden rounded-3xl border border-ink-200 bg-white">
+          <div className="hidden grid-cols-[1.2fr_1fr_0.9fr_0.8fr_0.7fr] gap-4 border-b border-ink-100 px-5 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-ink-400 md:grid">
+            <span>Circle</span>
+            <span>Leave window</span>
+            <span>Pickup area</span>
+            <span>Savings</span>
+            <span>Members</span>
+          </div>
+
+          {filtered.map((circle, index) => {
+            const VisibilityIcon = visibilityIcons[circle.visibility];
             return (
               <motion.div
                 key={circle.id}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05, duration: 0.25 }}
+                transition={{ duration: 0.22, delay: index * 0.03 }}
               >
                 <Link
                   href={`/circles/${circle.id}`}
-                  className="block rounded-xl border border-ink-200 p-5 hover:border-ink-300 hover:shadow-sm transition-all"
+                  className="grid gap-3 border-b border-ink-100 px-5 py-4 transition-colors last:border-b-0 hover:bg-surface-secondary md:grid-cols-[1.2fr_1fr_0.9fr_0.8fr_0.7fr]"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base font-semibold text-ink-900">
-                          {circle.airport_iata}
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-base font-semibold text-ink-900">{circle.airport_iata}</span>
+                      <span className="text-sm text-ink-400">{circle.airport_name}</span>
+                      {circle.circle_type === 'leaving_now' && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-600">
+                          <Zap className="h-3 w-3" />
+                          Leaving now
                         </span>
-                        <span className="text-sm text-ink-400">·</span>
-                        <span className="text-sm text-ink-600">{circle.airport_name}</span>
-                        {circle.circle_type === 'leaving_now' && (
-                          <span className="gs-badge bg-brand-100 text-brand-600 gap-1">
-                            <Zap className="h-3 w-3" />
-                            Now
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-500">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3.5 w-3.5" />
-                          {formatTime(circle.target_leave_time)}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3.5 w-3.5" />
-                          {circle.neighborhood}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <VisIcon className="h-3.5 w-3.5" />
-                          {circle.visibility}
-                        </span>
-                      </div>
-                      {circle.community_name && (
-                        <div className="mt-1.5">
-                          <span className="gs-badge bg-purple-50 text-purple-600">
-                            <GraduationCap className="h-3 w-3 mr-1" />
-                            {circle.community_name}
-                          </span>
-                        </div>
                       )}
                     </div>
-
-                    <div className="text-right shrink-0">
-                      <div className="flex items-center gap-1 text-sm font-semibold text-success-500">
-                        <DollarSign className="h-4 w-4" />
-                        Save ~{formatSavings(circle.estimated_savings_cents)}
-                      </div>
-                      <div className="mt-1 flex items-center gap-1 text-sm text-ink-500">
-                        <Users className="h-3.5 w-3.5" />
-                        {circle.current_members}/{circle.max_members}
-                      </div>
-                      {circle.estimated_extra_minutes > 0 && (
-                        <div className="mt-0.5 text-xs text-ink-400">
-                          +{circle.estimated_extra_minutes} min detour
-                        </div>
-                      )}
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-ink-500">
+                      <span className="inline-flex items-center gap-1">
+                        <VisibilityIcon className="h-3.5 w-3.5" />
+                        {circle.visibility === 'community' ? circle.community_name ?? 'Community' : circle.visibility}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <ArrowUpRight className="h-3.5 w-3.5" />
+                        Created by {circle.creator_name}
+                      </span>
                     </div>
                   </div>
-                  <div className="mt-3 text-xs text-ink-400">
-                    Created by {circle.creator_name}
+
+                  <div className="text-sm text-ink-700">
+                    <div className="inline-flex items-center gap-1.5 font-semibold text-ink-900">
+                      <Clock className="h-4 w-4 text-ink-400" />
+                      {formatTime(circle.target_leave_time)}
+                    </div>
+                    <div className="mt-1 text-xs text-ink-500">
+                      {formatTime(circle.leave_window_start)} to {formatTime(circle.leave_window_end)}
+                    </div>
+                  </div>
+
+                  <div className="text-sm text-ink-700">
+                    <div className="inline-flex items-center gap-1.5 font-medium">
+                      <MapPin className="h-4 w-4 text-ink-400" />
+                      {circle.neighborhood}
+                    </div>
+                    <div className="mt-1 text-xs text-ink-500">Detour cap +{circle.estimated_extra_minutes} min</div>
+                  </div>
+
+                  <div className="text-sm">
+                    <div className="inline-flex items-center gap-1.5 font-semibold text-success-500">
+                      <DollarSign className="h-4 w-4" />
+                      {formatSavings(circle.estimated_savings_cents)}
+                    </div>
+                    <div className="mt-1 text-xs text-ink-500">Estimated per rider</div>
+                  </div>
+
+                  <div className="text-sm text-ink-700">
+                    <div className="inline-flex items-center gap-1.5 font-semibold text-ink-900">
+                      <Users className="h-4 w-4 text-ink-400" />
+                      {circle.current_members}/{circle.max_members}
+                    </div>
+                    <div className="mt-1 text-xs text-ink-500 capitalize">{circle.status}</div>
                   </div>
                 </Link>
               </motion.div>
@@ -145,12 +164,10 @@ export default function CirclesPage() {
         </div>
 
         {filtered.length === 0 && (
-          <div className="text-center py-16">
+          <div className="py-20 text-center">
             <Users className="mx-auto h-12 w-12 text-ink-200" />
-            <h3 className="mt-4 text-lg font-semibold text-ink-900">No circles yet</h3>
-            <p className="mt-1 text-sm text-ink-500">
-              Be the first to create a ride circle for your trip.
-            </p>
+            <h3 className="mt-4 text-xl font-semibold text-ink-900">No circles yet for this view</h3>
+            <p className="mt-2 text-sm text-ink-500">Start one and set the tone for everyone heading to the airport.</p>
             <Link href="/circles/new" className="gs-btn-primary mt-6 gap-2">
               <Plus className="h-4 w-4" />
               Create a circle

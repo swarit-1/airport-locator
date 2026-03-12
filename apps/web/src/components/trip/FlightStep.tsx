@@ -1,7 +1,20 @@
 'use client';
 
+import { useEffect } from 'react';
+import { Crosshair, Loader2, LocateFixed, Sparkles } from 'lucide-react';
 import { StepShell } from './StepShell';
-import type { DemoAirport } from '@/lib/demo-data';
+import type { AirportRule } from '@/lib/repositories';
+import {
+  DEFAULT_DEPARTURE_TIME,
+  getDefaultDepartureDate,
+  getDefaultOrigin,
+} from '@/lib/trip-defaults';
+
+type ResolveStatus = {
+  status: 'idle' | 'loading' | 'resolved' | 'error';
+  message?: string;
+  sourceLabel?: string;
+};
 
 interface FlightStepProps {
   form: {
@@ -10,49 +23,84 @@ interface FlightStepProps {
     departure_date: string;
     departure_time: string;
     airport_iata: string;
+    airport_timezone?: string;
     flight_type: 'domestic' | 'international';
     origin_label: string;
+    origin_mode?: 'typed_address' | 'device_location';
+    terminal?: string | null;
+    gate?: string | null;
+    resolved_flight_source_name?: string | null;
+    resolved_flight_source_type?: string | null;
+    resolved_flight_notes?: string | null;
+    resolved_location_source_name?: string | null;
+    resolved_location_notes?: string | null;
   };
-  airports: DemoAirport[];
+  airports: AirportRule[];
   onUpdate: (updates: Record<string, unknown>) => void;
+  onResolveFlight: () => void;
+  onResolveOrigin: () => void;
+  onUseCurrentLocation: () => void;
+  flightLookup: ResolveStatus;
+  locationLookup: ResolveStatus;
   onNext: () => void;
   onBack: () => void;
 }
 
-// Default origins near each airport for demo
-const DEFAULT_ORIGINS: Record<string, { label: string; lat: number; lng: number }> = {
-  SEA: { label: 'Downtown Seattle', lat: 47.6062, lng: -122.3321 },
-  LAX: { label: 'Santa Monica', lat: 34.0195, lng: -118.4912 },
-  SFO: { label: 'Downtown San Francisco', lat: 37.7749, lng: -122.4194 },
-  DEN: { label: 'Downtown Denver', lat: 39.7392, lng: -104.9903 },
-  DFW: { label: 'Downtown Dallas', lat: 32.7767, lng: -96.7970 },
-  ORD: { label: 'Downtown Chicago', lat: 41.8781, lng: -87.6298 },
-  ATL: { label: 'Midtown Atlanta', lat: 33.7490, lng: -84.3880 },
-  JFK: { label: 'Manhattan', lat: 40.7580, lng: -73.9855 },
-  LGA: { label: 'Manhattan', lat: 40.7580, lng: -73.9855 },
-  MCO: { label: 'Downtown Orlando', lat: 28.5383, lng: -81.3792 },
-};
+export function FlightStep({
+  form,
+  airports,
+  onUpdate,
+  onResolveFlight,
+  onResolveOrigin,
+  onUseCurrentLocation,
+  flightLookup,
+  locationLookup,
+  onNext,
+  onBack,
+}: FlightStepProps) {
+  const canProceed = Boolean(
+    form.flight_number.trim() &&
+    form.departure_date &&
+    form.departure_time &&
+    form.airport_iata &&
+    form.origin_label.trim(),
+  );
 
-// Tomorrow's date
-const tomorrow = new Date();
-tomorrow.setDate(tomorrow.getDate() + 1);
-const tomorrowStr = tomorrow.toISOString().split('T')[0]!;
+  useEffect(() => {
+    const updates: Record<string, unknown> = {};
+    const defaultOrigin = getDefaultOrigin(form.airport_iata);
 
-export function FlightStep({ form, airports, onUpdate, onNext, onBack }: FlightStepProps) {
-  const canProceed = form.flight_number && form.departure_date && form.departure_time && form.airport_iata;
+    if (!form.departure_date) updates.departure_date = getDefaultDepartureDate();
+    if (!form.departure_time) updates.departure_time = DEFAULT_DEPARTURE_TIME;
+    if (!form.origin_label) {
+      updates.origin_label = defaultOrigin.label;
+      updates.origin_lat = defaultOrigin.lat;
+      updates.origin_lng = defaultOrigin.lng;
+      updates.origin_mode = 'typed_address';
+    }
+
+    if (Object.keys(updates).length > 0) onUpdate(updates);
+  }, [form.airport_iata, form.departure_date, form.departure_time, form.origin_label, onUpdate]);
 
   const handleAirportChange = (iata: string) => {
-    const origin = DEFAULT_ORIGINS[iata];
+    const airport = airports.find((item) => item.iata_code === iata);
+    const origin = getDefaultOrigin(iata);
     onUpdate({
       airport_iata: iata,
-      ...(origin ? { origin_label: origin.label, origin_lat: origin.lat, origin_lng: origin.lng } : {}),
+      airport_timezone: airport?.timezone ?? form.airport_timezone ?? null,
+      origin_label: origin.label,
+      origin_lat: origin.lat,
+      origin_lng: origin.lng,
+      origin_mode: 'typed_address',
     });
   };
 
+  const selectedAirport = airports.find((airport) => airport.iata_code === form.airport_iata);
+
   return (
     <StepShell
-      title="Tell us about your flight"
-      subtitle={`Flying ${form.airline_name || 'with your airline'}. We'll look up your departure details.`}
+      title="Flight number first. Manual control stays open."
+      subtitle={`Flying ${form.airline_name || 'with your airline'}. Add a flight number and date, then let GateShare try to resolve the airport and departure details before you fine-tune the origin.`}
       step={2}
       onBack={onBack}
       footer={
@@ -65,112 +113,218 @@ export function FlightStep({ form, airports, onUpdate, onNext, onBack }: FlightS
         </button>
       }
     >
-      <div className="space-y-6 max-w-lg">
-        {/* Flight number */}
-        <div>
-          <label htmlFor="flight_number" className="gs-label">
-            Flight number
-          </label>
-          <div className="flex items-center gap-2">
-            <span className="flex h-12 items-center rounded-lg border border-ink-200 bg-surface-secondary px-3 text-sm font-semibold text-ink-600">
-              {form.airline_name?.split(' ')[0] ?? 'AA'}
-            </span>
-            <input
-              id="flight_number"
-              type="text"
-              placeholder="1234"
-              value={form.flight_number}
-              onChange={(e) => onUpdate({ flight_number: e.target.value.replace(/\D/g, '') })}
-              className="gs-input flex-1"
-              inputMode="numeric"
-              autoFocus
-            />
+      <div className="space-y-8">
+        <section className="overflow-hidden rounded-[2rem] border border-black/6 bg-white/78 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
+          <div className="border-b border-black/6 px-5 py-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">
+              Flight lookup
+            </div>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-600">
+              If a provider is configured, we resolve the flight and prefill the airport, scheduled departure, and terminal context. If not, the form still works in manual mode.
+            </p>
           </div>
-        </div>
 
-        {/* Departure date */}
-        <div>
-          <label htmlFor="departure_date" className="gs-label">
-            Departure date
-          </label>
-          <input
-            id="departure_date"
-            type="date"
-            value={form.departure_date || tomorrowStr}
-            onChange={(e) => onUpdate({ departure_date: e.target.value })}
-            min={new Date().toISOString().split('T')[0]}
-            className="gs-input"
-          />
-        </div>
+          <div className="grid gap-4 px-5 py-5 md:grid-cols-2">
+            <label className="block">
+              <span className="gs-label">Flight number</span>
+              <div className="flex items-center gap-2">
+                <span className="flex h-12 items-center rounded-full bg-[#edf1f7] px-4 text-sm font-semibold text-ink-700">
+                  {form.airline_name?.split(' ')[0] ?? 'Airline'}
+                </span>
+                <input
+                  id="flight_number"
+                  type="text"
+                  placeholder="1286"
+                  value={form.flight_number}
+                  onChange={(event) => onUpdate({ flight_number: event.target.value.replace(/\D/g, '') })}
+                  className="gs-input flex-1 !rounded-full !border-black/8 !bg-[#fbfaf7]"
+                  inputMode="numeric"
+                  autoFocus
+                />
+              </div>
+            </label>
 
-        {/* Departure time */}
-        <div>
-          <label htmlFor="departure_time" className="gs-label">
-            Scheduled departure time
-          </label>
-          <input
-            id="departure_time"
-            type="time"
-            value={form.departure_time || '14:30'}
-            onChange={(e) => onUpdate({ departure_time: e.target.value })}
-            className="gs-input"
-          />
-        </div>
+            <label className="block">
+              <span className="gs-label">Departure date</span>
+              <input
+                id="departure_date"
+                type="date"
+                value={form.departure_date}
+                onChange={(event) => onUpdate({ departure_date: event.target.value })}
+                min={new Date().toISOString().split('T')[0]}
+                className="gs-input !rounded-full !border-black/8 !bg-[#fbfaf7]"
+              />
+            </label>
+          </div>
 
-        {/* Airport */}
-        <div>
-          <label htmlFor="airport" className="gs-label">
-            Departing from
-          </label>
-          <select
-            id="airport"
-            value={form.airport_iata}
-            onChange={(e) => handleAirportChange(e.target.value)}
-            className="gs-input"
-          >
-            {airports.map((a) => (
-              <option key={a.iata_code} value={a.iata_code}>
-                {a.iata_code} — {a.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Flight type */}
-        <div>
-          <label className="gs-label">Flight type</label>
-          <div className="flex gap-3">
-            {(['domestic', 'international'] as const).map((type) => (
+          <div className="border-t border-black/6 px-5 py-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-ink-500">
+                {flightLookup.status === 'resolved'
+                  ? `Resolved from ${flightLookup.sourceLabel ?? 'provider'}`
+                  : 'Use provider-backed lookup when available, or continue with manual details below.'}
+              </div>
               <button
-                key={type}
-                onClick={() => onUpdate({ flight_type: type })}
-                className={`gs-chip flex-1 justify-center ${
-                  form.flight_type === type ? 'gs-chip-active' : ''
-                }`}
+                onClick={onResolveFlight}
+                disabled={!form.flight_number.trim() || !form.departure_date || flightLookup.status === 'loading'}
+                className="gs-btn-secondary w-full gap-2 !rounded-full sm:w-auto"
               >
-                {type === 'domestic' ? 'Domestic' : 'International'}
+                {flightLookup.status === 'loading' ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Looking up flight
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Autofill from flight
+                  </>
+                )}
               </button>
-            ))}
+            </div>
+            {flightLookup.message ? (
+              <p className={`mt-3 text-sm ${flightLookup.status === 'error' ? 'text-warning-500' : 'text-ink-500'}`}>
+                {flightLookup.message}
+              </p>
+            ) : null}
           </div>
-        </div>
+        </section>
 
-        {/* Origin */}
-        <div>
-          <label htmlFor="origin" className="gs-label">
-            Where are you coming from?
-          </label>
-          <input
-            id="origin"
-            type="text"
-            placeholder="Downtown Seattle"
-            value={form.origin_label || DEFAULT_ORIGINS[form.airport_iata]?.label || ''}
-            onChange={(e) => onUpdate({ origin_label: e.target.value })}
-            className="gs-input"
-          />
-          <p className="mt-1 text-xs text-ink-400">
-            In the MVP, we use a preset location for your area. Real geocoding coming soon.
-          </p>
-        </div>
+        <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="space-y-6 rounded-[2rem] border border-black/6 bg-white/78 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block">
+                <span className="gs-label">Scheduled departure time</span>
+                <input
+                  id="departure_time"
+                  type="time"
+                  value={form.departure_time}
+                  onChange={(event) => onUpdate({ departure_time: event.target.value })}
+                  className="gs-input !rounded-full !border-black/8 !bg-[#fbfaf7]"
+                />
+              </label>
+
+              <label className="block">
+                <span className="gs-label">Departing from</span>
+                <select
+                  id="airport"
+                  value={form.airport_iata}
+                  onChange={(event) => handleAirportChange(event.target.value)}
+                  className="gs-input !rounded-full !border-black/8 !bg-[#fbfaf7]"
+                >
+                  {airports.map((airport) => (
+                    <option key={airport.iata_code} value={airport.iata_code}>
+                      {airport.iata_code} — {airport.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div>
+              <label className="gs-label">Flight type</label>
+              <div className="flex flex-wrap gap-2">
+                {(['domestic', 'international'] as const).map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => onUpdate({ flight_type: type })}
+                    className={`gs-chip ${form.flight_type === type ? 'gs-chip-active' : ''}`}
+                  >
+                    {type === 'domestic' ? 'Domestic' : 'International'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <label htmlFor="origin" className="gs-label !mb-0">
+                  Origin or pickup area
+                </label>
+                <button
+                  onClick={onUseCurrentLocation}
+                  disabled={locationLookup.status === 'loading'}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-brand-600"
+                >
+                  <LocateFixed className="h-3.5 w-3.5" />
+                  Use current location
+                </button>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <div className="relative flex-1">
+                  <Crosshair className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+                  <input
+                    id="origin"
+                    type="text"
+                    placeholder={getDefaultOrigin(form.airport_iata)?.label ?? 'Origin area'}
+                    value={form.origin_label}
+                    onChange={(event) => onUpdate({ origin_label: event.target.value, origin_mode: 'typed_address' })}
+                    className="gs-input !rounded-full !border-black/8 !bg-[#fbfaf7] !pl-11"
+                  />
+                </div>
+                <button
+                  onClick={onResolveOrigin}
+                  disabled={!form.origin_label.trim() || locationLookup.status === 'loading'}
+                  className="gs-btn-secondary gap-2 !rounded-full"
+                >
+                  {locationLookup.status === 'loading' ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Resolving
+                    </>
+                  ) : (
+                    'Use this origin'
+                  )}
+                </button>
+              </div>
+              <p className={`text-sm ${locationLookup.status === 'error' ? 'text-warning-500' : 'text-ink-500'}`}>
+                {locationLookup.message ??
+                  'Use a neighborhood, landmark, or address. Exact home addresses stay private until you decide to share them.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-[2rem] border border-black/6 bg-[#eef3ff] p-5">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700">
+              Current trip context
+            </div>
+            <div className="mt-4 space-y-4 text-sm text-ink-600">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-400">Airport</div>
+                <div className="mt-1 font-semibold text-ink-900">
+                  {selectedAirport?.iata_code ?? form.airport_iata}
+                  {selectedAirport ? ` — ${selectedAirport.name}` : null}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-400">Resolved details</div>
+                <div className="mt-1 font-semibold text-ink-900">
+                  {form.terminal || form.gate
+                    ? `Terminal ${form.terminal ?? 'TBD'} · Gate ${form.gate ?? 'TBD'}`
+                    : 'Manual timing in progress'}
+                </div>
+                {form.resolved_flight_source_name ? (
+                  <p className="mt-1 text-sm text-ink-500">
+                    {form.resolved_flight_source_name}
+                    {form.resolved_flight_notes ? ` · ${form.resolved_flight_notes}` : ''}
+                  </p>
+                ) : null}
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-400">Origin</div>
+                <div className="mt-1 font-semibold text-ink-900">{form.origin_label}</div>
+                {form.resolved_location_source_name ? (
+                  <p className="mt-1 text-sm text-ink-500">
+                    {form.origin_mode === 'device_location' ? 'Device location' : 'Typed origin'} via {form.resolved_location_source_name}
+                    {form.resolved_location_notes ? ` · ${form.resolved_location_notes}` : ''}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </StepShell>
   );

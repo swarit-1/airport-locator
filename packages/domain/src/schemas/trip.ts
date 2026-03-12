@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { GeoPointSchema, RiskProfileSchema, RideModeSchema, FlightTypeSchema } from './common';
+import { GeoPointSchema, RiskProfileSchema, RideModeSchema, FlightTypeSchema, LocationModeSchema } from './common';
+import { FlightInfoSchema } from './provider';
 
 export const TripSchema = z.object({
   id: z.string().uuid(),
@@ -43,3 +44,17 @@ export const CreateTripInputSchema = TripSchema.omit({
   updated_at: true,
 });
 export type CreateTripInput = z.infer<typeof CreateTripInputSchema>;
+
+export const ResolvedFlightStateSchema = z.object({
+  flight: FlightInfoSchema,
+  autofilled_at: z.string().datetime(),
+  source_label: z.string(),
+});
+export type ResolvedFlightState = z.infer<typeof ResolvedFlightStateSchema>;
+
+export const TripOriginStateSchema = z.object({
+  mode: LocationModeSchema,
+  label: z.string(),
+  location: GeoPointSchema,
+});
+export type TripOriginState = z.infer<typeof TripOriginStateSchema>;

@@ -10,7 +10,7 @@ const baseRequest: MatchRequest = {
   targetLeaveTime: new Date('2026-03-15T11:00:00Z'),
   leaveWindowStart: new Date('2026-03-15T10:30:00Z'),
   leaveWindowEnd: new Date('2026-03-15T11:30:00Z'),
-  latestSafeArrival: new Date('2026-03-15T13:00:00Z'),
+  latestSafeLeaveTime: new Date('2026-03-15T11:20:00Z'),
   communityId: null,
   maxDetourMinutes: 15,
 };
@@ -21,6 +21,7 @@ const baseCandidate: CircleCandidate = {
   targetLeaveTime: new Date('2026-03-15T11:00:00Z'),
   leaveWindowStart: new Date('2026-03-15T10:30:00Z'),
   leaveWindowEnd: new Date('2026-03-15T11:30:00Z'),
+  latestSafeLeaveTime: new Date('2026-03-15T11:25:00Z'),
   approximateOrigin: { lat: 47.6100, lng: -122.3400 },
   proximityRadiusKm: 10,
   maxDetourMinutes: 15,
@@ -131,5 +132,23 @@ describe('CircleMatcher', () => {
   it('returns positive estimated savings', () => {
     const results = matcher.match(baseRequest, [baseCandidate]);
     expect(results[0]!.estimatedSavingsCents).toBeGreaterThanOrEqual(0);
+  });
+
+  it('rejects a match when detoured leave time exceeds the requester safe leave threshold', () => {
+    const results = matcher.match(
+      { ...baseRequest, latestSafeLeaveTime: new Date('2026-03-15T11:00:00Z') },
+      [baseCandidate],
+    );
+    expect(results).toHaveLength(0);
+  });
+
+  it('rejects a match when detour would push the existing circle past its own safe leave threshold', () => {
+    const results = matcher.match(baseRequest, [
+      {
+        ...baseCandidate,
+        latestSafeLeaveTime: new Date('2026-03-15T11:00:00Z'),
+      },
+    ]);
+    expect(results).toHaveLength(0);
   });
 });

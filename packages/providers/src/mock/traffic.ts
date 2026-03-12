@@ -29,6 +29,8 @@ export class MockTrafficProvider implements TrafficProvider {
       duration_in_traffic_minutes: durationInTraffic,
       distance_km: Math.round(distanceKm * 10) / 10,
       source: 'mock',
+      source_name: 'Deterministic traffic model',
+      source_type: 'mock',
       fetched_at: new Date().toISOString(),
     };
   }

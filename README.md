@@ -1,22 +1,24 @@
 # GateShare
 
-**Know when to leave. Share the ride.**
+**never miss a flight again**
 
-GateShare helps travelers figure out exactly when to leave for the airport — then connects them with others heading the same way to share a ride.
+GateShare helps travelers figure out exactly when to leave for the airport, explains why, and then connects them with others heading the same way to share a ride.
 
 ## Quick Start
 
 ```bash
-# Prerequisites: Node 20+, pnpm 9+
+# Prerequisites: Node 20+, npm 11+
 cp .env.example .env.local
 
-pnpm install
-pnpm dev
+npm install
+npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-The app runs fully in demo mode without any external services. All providers use deterministic mocks.
+The app runs fully in demo mode without any external services. Demo mode persists core trip, recommendation, circle, chat, share, and admin edits in browser local storage. Provider integrations remain deterministic mocks unless live credentials are added.
+
+To opt into the unfinished Supabase adapter layer, set `NEXT_PUBLIC_USE_SUPABASE=true`. Leave it `false` for local demo mode.
 
 ## What You'll See
 
@@ -47,6 +49,8 @@ The app runs fully in demo mode without any external services. All providers use
 
 ### Home-to-Gate Timing
 - Multi-step trip creation flow
+- Flight-number autofill route with live-adapter fallback
+- Typed-origin and current-location resolution with deterministic fallback
 - Real recommendation engine (not a magic constant)
 - Factors: traffic, security wait times, airline rules, airport walking, risk profile
 - Breakdown showing "why this time" with source freshness
@@ -73,33 +77,36 @@ The app runs fully in demo mode without any external services. All providers use
 - **Animation**: Framer Motion
 - **Backend**: Supabase (Auth, Postgres + PostGIS, Realtime)
 - **Validation**: Zod
-- **Monorepo**: pnpm workspaces + Turborepo
+- **Monorepo**: npm workspaces
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `pnpm dev` | Start dev server |
-| `pnpm build` | Build all packages |
-| `pnpm typecheck` | Type-check everything |
-| `pnpm lint` | Lint everything |
-| `pnpm test` | Run tests |
+| `npm run dev` | Start web app |
+| `npm run dev:worker` | Start worker |
+| `npm run build` | Build all packages |
+| `npm run typecheck` | Type-check everything |
+| `npm run lint` | Lint everything |
+| `npm test` | Run tests |
 
 ## Supabase Setup (Optional)
 
-The app works without Supabase using in-memory demo data. To connect:
+The app works without Supabase using persisted demo data. A Supabase repository adapter scaffold exists, but it is not fully wired for CRUD yet. To prepare for Supabase later:
 
 1. Install [Supabase CLI](https://supabase.com/docs/guides/cli)
 2. `supabase start`
 3. Run migration: `psql -f packages/db/src/migrations/001_initial.sql`
 4. Update `.env.local` with your Supabase credentials
+5. Set `NEXT_PUBLIC_USE_SUPABASE=true` only after those adapters are finished
 
 ## What's Mocked
 
 | Provider | Status | To Make Live |
 |----------|--------|-------------|
-| Traffic | Mock (Haversine heuristic) | Set `GOOGLE_MAPS_API_KEY` |
-| Flight Status | Mock (deterministic) | Set `FLIGHTAWARE_API_KEY` |
+| Traffic | Mock by default, Google Routes adapter available | Set `FEATURE_LIVE_TRAFFIC=true` and `GOOGLE_MAPS_API_KEY` |
+| Flight Status | Mock by default, FlightAware-compatible adapter available | Set `FEATURE_LIVE_FLIGHT=true` and `FLIGHTAWARE_API_KEY` |
+| Location Resolve | Deterministic fallback geocoder | Reuses Google Maps key when live traffic/geocoding is enabled |
 | Wait Times | Mock (historical model) | Enable MyTSA, crowdsourced |
 | Ride Links | Working (deep links) | No API key needed |
 | Cost Estimates | Mock (distance heuristic) | Uber/Lyft partner API |

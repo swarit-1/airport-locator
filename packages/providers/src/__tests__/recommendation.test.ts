@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { RecommendationEngine } from '../engine/recommendation';
+import { RecommendationEngine, parseLocalTime } from '../engine/recommendation';
 import { MockTrafficProvider } from '../mock/traffic';
 import { MockFlightProvider } from '../mock/flight';
 import { MockWaitTimeProvider } from '../mock/wait-time';
@@ -16,6 +16,7 @@ const baseInput: RecommendationInput = {
   origin: { lat: 47.6062, lng: -122.3321 },
   airportLocation: { lat: 47.4502, lng: -122.3088 },
   airportIata: 'SEA',
+  airportTimezone: 'America/Los_Angeles',
   airlineIata: 'AA',
   flightNumber: '1234',
   departureDate: '2026-03-15',
@@ -68,7 +69,11 @@ describe('RecommendationEngine', () => {
   it('leave time is before departure time', async () => {
     const rec = await engine.compute(baseInput);
     const leaveTime = new Date(rec.recommended_leave_time);
-    const departureTime = new Date(`${baseInput.departureDate}T${baseInput.departureTime}:00.000Z`);
+    const departureTime = parseLocalTime(
+      baseInput.departureDate,
+      baseInput.departureTime,
+      baseInput.airportTimezone,
+    );
     expect(leaveTime.getTime()).toBeLessThan(departureTime.getTime());
   });
 
@@ -97,7 +102,7 @@ describe('RecommendationEngine', () => {
       hasCheckedBags: true,
       bagCount: 2,
     });
-    const bagItem = withBags.breakdown.find((b) => b.label === 'Bag drop');
+    const bagItem = withBags.breakdown.find((b) => b.label === 'Bag check');
     expect(bagItem).toBeDefined();
     expect(bagItem!.minutes).toBeGreaterThan(0);
   });
@@ -163,5 +168,95 @@ describe('RecommendationEngine', () => {
       expect(item.minutes).toBeGreaterThanOrEqual(0);
       expect(item.description.length).toBeGreaterThan(0);
     }
+  });
+
+  it('bag check includes both curb-to-drop and drop-to-security segments', async () => {
+    const rec = await engine.compute({
+      ...baseInput,
+      hasCheckedBags: true,
+      bagCount: 2,
+    });
+    const bagItem = rec.breakdown.find((b) => b.label === 'Bag check')!;
+    // curb_to_bag_drop (10) + bag_drop_to_security (5) = 15
+    expect(bagItem.minutes).toBe(15);
+  });
+
+  it('extra bags over 2 add 5 minutes to bag check', async () => {
+    const rec = await engine.compute({
+      ...baseInput,
+      hasCheckedBags: true,
+      bagCount: 3,
+    });
+    const bagItem = rec.breakdown.find((b) => b.label === 'Bag check')!;
+    // curb_to_bag_drop (10) + bag_drop_to_security (5) + extra (5) = 20
+    expect(bagItem.minutes).toBe(20);
+  });
+
+  it('latest safe gate arrival is departure minus gate_close_minutes', async () => {
+    const rec = await engine.compute(baseInput);
+    const gateArrival = new Date(rec.latest_safe_gate_arrival);
+    // Gate close = 15 min before departure
+    // The departure is parsed via parseLocalTime, so reconstruct expected value
+    const departure = parseLocalTime(
+      baseInput.departureDate,
+      baseInput.departureTime,
+      baseInput.airportTimezone,
+    );
+    const expectedGateMs = departure.getTime() - 15 * 60_000;
+    expect(gateArrival.getTime()).toBe(expectedGateMs);
+  });
+
+  it('latest safe security entry is before latest safe gate arrival', async () => {
+    const rec = await engine.compute(baseInput);
+    const secEntry = new Date(rec.latest_safe_security_entry);
+    const gateArrival = new Date(rec.latest_safe_gate_arrival);
+    expect(secEntry.getTime()).toBeLessThan(gateArrival.getTime());
+  });
+
+  it('checked bags produce a latest_safe_bag_drop', async () => {
+    const rec = await engine.compute({
+      ...baseInput,
+      hasCheckedBags: true,
+      bagCount: 1,
+    });
+    expect(rec.latest_safe_bag_drop).not.toBeNull();
+    const bagDrop = new Date(rec.latest_safe_bag_drop!);
+    const secEntry = new Date(rec.latest_safe_security_entry);
+    expect(bagDrop.getTime()).toBeLessThan(secEntry.getTime());
+  });
+
+  it('no checked bags means null latest_safe_bag_drop', async () => {
+    const rec = await engine.compute(baseInput);
+    expect(rec.latest_safe_bag_drop).toBeNull();
+  });
+});
+
+describe('parseLocalTime', () => {
+  it('produces a valid Date', () => {
+    const result = parseLocalTime('2026-03-15', '14:30', 'America/Los_Angeles');
+    expect(result).toBeInstanceOf(Date);
+    expect(result.getTime()).not.toBeNaN();
+  });
+
+  it('treats time as local to the given timezone, not UTC', () => {
+    // 14:30 PDT (UTC-7 in March = PDT) should be 21:30 UTC
+    const result = parseLocalTime('2026-03-15', '14:30', 'America/Los_Angeles');
+    expect(result.getUTCHours()).toBe(21);
+    expect(result.getUTCMinutes()).toBe(30);
+  });
+
+  it('Eastern time produces different UTC than Pacific', () => {
+    const pacific = parseLocalTime('2026-03-15', '14:30', 'America/Los_Angeles');
+    const eastern = parseLocalTime('2026-03-15', '14:30', 'America/New_York');
+    // Eastern is 3 hours ahead of Pacific, so same local time = 3 hours earlier in UTC
+    expect(eastern.getTime()).toBeLessThan(pacific.getTime());
+    const diffHours = (pacific.getTime() - eastern.getTime()) / (60 * 60 * 1000);
+    expect(diffHours).toBe(3);
+  });
+
+  it('falls back gracefully for invalid timezone', () => {
+    const result = parseLocalTime('2026-03-15', '14:30', 'Invalid/Zone');
+    expect(result).toBeInstanceOf(Date);
+    expect(result.getTime()).not.toBeNaN();
   });
 });

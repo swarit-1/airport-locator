@@ -12,6 +12,9 @@ export type RiskProfile = z.infer<typeof RiskProfileSchema>;
 export const RideModeSchema = z.enum(['rideshare', 'friend_dropoff', 'self_drive', 'transit']);
 export type RideMode = z.infer<typeof RideModeSchema>;
 
+export const LocationModeSchema = z.enum(['typed_address', 'device_location']);
+export type LocationMode = z.infer<typeof LocationModeSchema>;
+
 export const FlightTypeSchema = z.enum(['domestic', 'international']);
 export type FlightType = z.infer<typeof FlightTypeSchema>;
 
@@ -25,6 +28,7 @@ export const SourceTypeSchema = z.enum([
   'fallback',
   'configured',
   'mock',
+  'manual',
 ]);
 export type SourceType = z.infer<typeof SourceTypeSchema>;
 

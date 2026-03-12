@@ -1,78 +1,107 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { useCallback, useEffect, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 
 interface IntroScreenProps {
   onComplete: () => void;
 }
 
 export function IntroScreen({ onComplete }: IntroScreenProps) {
+  const prefersReducedMotion = useReducedMotion();
   const [ready, setReady] = useState(false);
-  const prefersReducedMotion =
-    typeof window !== 'undefined'
-      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      : false;
 
   const skip = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem('gateshare-intro-seen', '1');
+    }
     onComplete();
   }, [onComplete]);
 
   useEffect(() => {
-    // Brief hold before auto-advance
-    const holdTimer = setTimeout(() => setReady(true), 200);
-    const autoAdvance = setTimeout(() => {
+    if (typeof window !== 'undefined' && window.sessionStorage.getItem('gateshare-intro-seen') === '1') {
       onComplete();
-    }, prefersReducedMotion ? 500 : 1600);
+      return;
+    }
+
+    const holdTimer = window.setTimeout(() => setReady(true), prefersReducedMotion ? 100 : 280);
+    const autoAdvance = window.setTimeout(() => {
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.setItem('gateshare-intro-seen', '1');
+      }
+      onComplete();
+    }, prefersReducedMotion ? 320 : 860);
 
     return () => {
-      clearTimeout(holdTimer);
-      clearTimeout(autoAdvance);
+      window.clearTimeout(holdTimer);
+      window.clearTimeout(autoAdvance);
     };
   }, [onComplete, prefersReducedMotion]);
 
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
         skip();
       }
     };
+
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [skip]);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-brand-500 cursor-pointer select-none"
+      className="fixed inset-0 z-50 cursor-pointer select-none overflow-hidden bg-[#1f5ae4] text-white"
       onClick={skip}
       role="button"
       tabIndex={0}
       aria-label="Skip intro"
     >
-      <motion.h1
-        className="text-5xl sm:text-7xl lg:text-hero font-extrabold text-white tracking-tight"
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={
-          ready
-            ? { opacity: 1, scale: 1 }
-            : { opacity: 0, scale: 0.95 }
-        }
-        transition={{
-          duration: prefersReducedMotion ? 0.1 : 0.5,
-          ease: [0.34, 1.56, 0.64, 1],
-        }}
-      >
-        Let&rsquo;s move
-      </motion.h1>
-      <motion.p
-        className="absolute bottom-8 text-sm text-white/50"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5, duration: 0.3 }}
-      >
-        Tap anywhere to skip
-      </motion.p>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(255,255,255,0.18),transparent_32%),radial-gradient(circle_at_85%_80%,rgba(255,255,255,0.12),transparent_28%)]" />
+      <div className="gs-container relative flex min-h-dvh flex-col justify-between py-10 sm:py-12">
+        <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.28em] text-white/62">
+          <span>GateShare</span>
+          <span>never miss a flight again</span>
+        </div>
+
+        <div className="grid items-end gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+          <motion.div
+            initial={{ opacity: 0, x: prefersReducedMotion ? 0 : 28 }}
+            animate={ready ? { opacity: 1, x: 0 } : { opacity: 0, x: prefersReducedMotion ? 0 : 28 }}
+            transition={{
+              duration: prefersReducedMotion ? 0.14 : 0.5,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+          >
+            <div className="max-w-4xl text-[clamp(3.5rem,11vw,7.5rem)] font-semibold leading-[0.92] tracking-[-0.05em]">
+              Let&apos;s move
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: prefersReducedMotion ? 0 : 40 }}
+            animate={ready ? { opacity: 1, x: 0 } : { opacity: 0, x: prefersReducedMotion ? 0 : 40 }}
+            transition={{
+              delay: prefersReducedMotion ? 0 : 0.08,
+              duration: prefersReducedMotion ? 0.14 : 0.45,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+            className="max-w-sm justify-self-start text-sm leading-relaxed text-white/78 lg:justify-self-end"
+          >
+            Flight-aware timing first. Shared rides only if the timing still works for everyone.
+          </motion.div>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: prefersReducedMotion ? 0 : 0.45, duration: 0.25 }}
+          className="text-sm text-white/58"
+        >
+          Tap, click, or press Enter to skip
+        </motion.div>
+      </div>
     </div>
   );
 }

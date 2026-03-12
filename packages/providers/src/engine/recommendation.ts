@@ -32,10 +32,11 @@ export interface RecommendationInput {
   origin: GeoPoint;
   airportLocation: GeoPoint;
   airportIata: string;
+  airportTimezone: string; // e.g. "America/Los_Angeles"
   airlineIata: string;
   flightNumber: string;
-  departureDate: string;
-  departureTime: string; // HH:MM
+  departureDate: string;  // YYYY-MM-DD
+  departureTime: string;  // HH:MM in airport-local time
   flightType: FlightType;
   hasCheckedBags: boolean;
   bagCount: number;
@@ -50,12 +51,42 @@ export interface RecommendationInput {
   airlineRules: AirlineRules;
 }
 
-// Risk profile multipliers for uncertainty buffers
 const RISK_MULTIPLIERS: Record<RiskProfile, number> = {
   conservative: 1.5,
   balanced: 1.0,
   aggressive: 0.7,
 };
+
+/**
+ * Parse a date + time string in a specific IANA timezone into a UTC Date.
+ * Falls back to treating as UTC if Intl is unavailable.
+ */
+export function parseLocalTime(date: string, time: string, timezone: string): Date {
+  // Build an ISO-like string without Z so Date.parse doesn't assume UTC
+  const naive = `${date}T${time}:00`;
+  try {
+    // Use Intl to find the UTC offset for this timezone at this moment
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false,
+    });
+    // Create a date assuming UTC, then compute the offset
+    const asUtc = new Date(naive + 'Z');
+    const parts = formatter.formatToParts(asUtc);
+    const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00';
+    const localStr = `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}:${get('second')}Z`;
+    const localAsUtc = new Date(localStr);
+    // offset = local - UTC (in ms)
+    const offsetMs = localAsUtc.getTime() - asUtc.getTime();
+    // The actual UTC time: naive local time minus the offset
+    return new Date(new Date(naive + 'Z').getTime() - offsetMs);
+  } catch {
+    // Fallback: treat as UTC (better than crashing)
+    return new Date(naive + 'Z');
+  }
+}
 
 export class RecommendationEngine {
   constructor(
@@ -70,7 +101,14 @@ export class RecommendationEngine {
     const warnings: string[] = [];
     const riskMultiplier = RISK_MULTIPLIERS[input.riskProfile];
 
-    // 1. Get flight info
+    // 1. Parse departure in airport-local timezone → UTC
+    const scheduledDeparture = parseLocalTime(
+      input.departureDate,
+      input.departureTime,
+      input.airportTimezone,
+    );
+
+    // 2. Get flight info (may have delay)
     let flightInfo: FlightInfo | null = null;
     try {
       flightInfo = await this.flightProvider.getFlightInfo(
@@ -83,30 +121,30 @@ export class RecommendationEngine {
       overallConfidence = 'medium';
     }
 
-    // Use actual departure time (with delay) or scheduled
-    const scheduledDepartureStr = `${input.departureDate}T${input.departureTime}:00.000Z`;
     const actualDeparture = flightInfo?.estimated_departure
       ? new Date(flightInfo.estimated_departure)
-      : new Date(scheduledDepartureStr);
+      : scheduledDeparture;
 
     if (flightInfo?.delay_minutes && flightInfo.delay_minutes > 0) {
       warnings.push(`Flight is delayed by ${flightInfo.delay_minutes} minutes.`);
     }
 
-    // 2. Get traffic estimate
+    // 3. Traffic estimate
     let traffic: TrafficResult;
     try {
       traffic = await this.trafficProvider.getTrafficEstimate(
         input.origin,
         input.airportLocation,
+        actualDeparture,
       );
     } catch {
-      // Fallback: assume 30 minutes
       traffic = {
         duration_minutes: 30,
         duration_in_traffic_minutes: 40,
         distance_km: 25,
         source: 'fallback',
+        source_name: 'Fallback traffic model',
+        source_type: 'fallback',
         fetched_at: new Date().toISOString(),
       };
       overallConfidence = 'low';
@@ -119,11 +157,11 @@ export class RecommendationEngine {
       minutes: trafficMinutes,
       description: `${traffic.distance_km} km with current traffic conditions`,
       source: traffic.source,
-      source_type: traffic.source === 'mock' ? 'mock' : 'live_api',
+      source_type: traffic.source_type,
       freshness: traffic.fetched_at,
     });
 
-    // 3. Pickup uncertainty buffer based on ride mode
+    // 4. Pickup buffer
     const pickupBufferBase = getPickupBuffer(input.rideMode);
     const pickupBuffer = Math.round(pickupBufferBase * riskMultiplier);
     breakdown.push({
@@ -132,24 +170,23 @@ export class RecommendationEngine {
       description: getPickupDescription(input.rideMode),
     });
 
-    // 4. Bag drop buffer
-    let bagDropBuffer = 0;
+    // 5. Bag check path: curb → bag drop → walk to security
+    let bagCheckMinutes = 0;
     if (input.hasCheckedBags) {
-      bagDropBuffer = input.airportRules.curb_to_bag_drop_minutes;
-      // Extra time for multiple bags
-      if (input.bagCount > 2) {
-        bagDropBuffer += 5;
-      }
+      const curbToDrop = input.airportRules.curb_to_bag_drop_minutes;
+      const dropToSecurity = input.airportRules.bag_drop_to_security_minutes;
+      const extraBagTime = input.bagCount > 2 ? 5 : 0;
+      bagCheckMinutes = curbToDrop + dropToSecurity + extraBagTime;
       breakdown.push({
-        label: 'Bag drop',
-        minutes: bagDropBuffer,
+        label: 'Bag check',
+        minutes: bagCheckMinutes,
         description: input.bagCount > 2
-          ? `Check ${input.bagCount} bags (extra time for large party)`
-          : `Check bags at counter`,
+          ? `Curb to bag drop (${curbToDrop} min) + walk to security (${dropToSecurity} min) + extra for ${input.bagCount} bags`
+          : `Curb to bag drop (${curbToDrop} min) + walk to security (${dropToSecurity} min)`,
       });
     }
 
-    // 5. Security wait time
+    // 6. Security wait
     let waitTime: WaitTimeResult;
     try {
       waitTime = await this.waitTimeProvider.getWaitTime(
@@ -168,7 +205,6 @@ export class RecommendationEngine {
       overallConfidence = 'low';
     }
 
-    // Apply trusted traveler reductions
     let securityMinutes = waitTime.value_minutes;
     if (input.hasClear) {
       securityMinutes = Math.max(5, Math.round(securityMinutes * 0.3));
@@ -201,33 +237,27 @@ export class RecommendationEngine {
       });
     }
 
-    // 6. Airport walk time
+    // 7. Walk from security to gate
     let walkMinutes = input.airportRules.security_to_gate_minutes;
-    if (input.accessibilityNeeds) {
-      walkMinutes = Math.round(walkMinutes * 1.5);
-    }
-    if (input.travelingWithKids) {
-      walkMinutes = Math.round(walkMinutes * 1.3);
-    }
+    if (input.accessibilityNeeds) walkMinutes = Math.round(walkMinutes * 1.5);
+    if (input.travelingWithKids) walkMinutes = Math.round(walkMinutes * 1.3);
     breakdown.push({
       label: 'Walk to gate',
       minutes: walkMinutes,
       description: input.accessibilityNeeds
         ? 'Adjusted for accessibility needs'
-        : 'From security to your gate area',
+        : 'From security exit to gate area',
     });
 
-    // 7. Boarding buffer
-    const boardingBuffer = Math.round(
-      input.airlineRules.boarding_begins_minutes * riskMultiplier,
-    );
+    // 8. Boarding buffer (arrive before boarding starts)
+    const boardingBuffer = Math.round(input.airlineRules.boarding_begins_minutes * riskMultiplier);
     breakdown.push({
-      label: 'Boarding buffer',
+      label: 'Pre-boarding buffer',
       minutes: boardingBuffer,
-      description: `Arrive before boarding begins (${input.riskProfile} profile)`,
+      description: `Arrive before boarding begins (${input.riskProfile})`,
     });
 
-    // 8. Party size buffer
+    // 9. Party size buffer
     let partySizeBuffer = 0;
     if (input.partySize > 3) {
       partySizeBuffer = 5;
@@ -238,7 +268,7 @@ export class RecommendationEngine {
       });
     }
 
-    // 9. International buffer
+    // 10. International buffer
     let internationalBuffer = 0;
     if (input.flightType === 'international') {
       internationalBuffer = 15;
@@ -249,39 +279,51 @@ export class RecommendationEngine {
       });
     }
 
-    // Calculate totals
+    // ─── Compute totals ───────────────────────────────────────────────
     const totalMinutes =
-      trafficMinutes +
-      pickupBuffer +
-      bagDropBuffer +
-      securityMinutes +
-      walkMinutes +
-      boardingBuffer +
-      partySizeBuffer +
-      internationalBuffer;
+      trafficMinutes + pickupBuffer + bagCheckMinutes +
+      securityMinutes + walkMinutes + boardingBuffer +
+      partySizeBuffer + internationalBuffer;
 
-    // Work backwards from departure
     const departureMs = actualDeparture.getTime();
     const recommendedLeaveMs = departureMs - totalMinutes * 60_000;
     const windowPaddingMs = Math.round(15 * riskMultiplier) * 60_000;
 
     const recommendedLeaveTime = new Date(recommendedLeaveMs);
     const leaveWindowStart = new Date(recommendedLeaveMs - windowPaddingMs);
-    const leaveWindowEnd = new Date(recommendedLeaveMs + windowPaddingMs / 2);
+    const leaveWindowEnd = new Date(recommendedLeaveMs + Math.round(windowPaddingMs * 0.5));
 
     // Curb arrival = leave time + traffic + pickup buffer
     const curbArrivalMs = recommendedLeaveMs + (trafficMinutes + pickupBuffer) * 60_000;
     const recommendedCurbArrival = new Date(curbArrivalMs);
 
-    // Latest safe times
+    // ─── Latest safe milestones (working backwards from gate close) ───
+    // Gate close is the hard deadline
     const gateCloseMs = departureMs - input.airlineRules.gate_close_minutes * 60_000;
-    const latestSafeGate = new Date(gateCloseMs - walkMinutes * 60_000);
-    const latestSafeSecurity = new Date(latestSafeGate.getTime() - securityMinutes * 60_000);
-    const latestSafeBagDrop = input.hasCheckedBags
-      ? new Date(departureMs - input.airlineRules.bag_drop_cutoff_minutes * 60_000).toISOString()
-      : null;
 
-    // Confidence score
+    // Must be at gate before gate close
+    const latestSafeGateMs = gateCloseMs;
+    const latestSafeGate = new Date(latestSafeGateMs);
+
+    // Must clear security: gate arrival - walk time
+    const latestSafeSecurityExitMs = latestSafeGateMs - walkMinutes * 60_000;
+    // Must enter security: security exit - security wait
+    const latestSafeSecurityEntryMs = latestSafeSecurityExitMs - securityMinutes * 60_000;
+    const latestSafeSecurityEntry = new Date(latestSafeSecurityEntryMs);
+
+    // Bag drop deadline: airline cutoff from departure OR
+    // must complete bag drop + walk to security before latest security entry
+    let latestSafeBagDrop: string | null = null;
+    if (input.hasCheckedBags) {
+      const airlineBagCutoffMs = departureMs - input.airlineRules.bag_drop_cutoff_minutes * 60_000;
+      const walkFromDropMs = input.airportRules.bag_drop_to_security_minutes * 60_000;
+      const structuralBagDeadlineMs = latestSafeSecurityEntryMs - walkFromDropMs;
+      // Use whichever is earlier (more conservative)
+      const bagDropMs = Math.min(airlineBagCutoffMs, structuralBagDeadlineMs);
+      latestSafeBagDrop = new Date(bagDropMs).toISOString();
+    }
+
+    // ─── Confidence ───────────────────────────────────────────────────
     let confidenceScore = 85;
     if (waitTime.confidence_level === 'low') confidenceScore -= 20;
     if (waitTime.confidence_level === 'medium') confidenceScore -= 10;
@@ -295,9 +337,10 @@ export class RecommendationEngine {
 
     // Summary
     const leaveTimeStr = formatTime(recommendedLeaveTime);
-    const summary = `Leave by ${leaveTimeStr} to comfortably make your ${formatTime(actualDeparture)} flight. ${
+    const departureStr = formatTime(actualDeparture);
+    const summary = `Leave by ${leaveTimeStr} to comfortably make your ${departureStr} flight. ${
       overallConfidence === 'high'
-        ? 'We\'re confident in this estimate.'
+        ? "We're confident in this estimate."
         : overallConfidence === 'medium'
           ? 'Some data sources are estimates — consider leaving a bit earlier.'
           : 'Limited data available — we recommend extra buffer time.'
@@ -311,7 +354,7 @@ export class RecommendationEngine {
       leave_window_end: leaveWindowEnd.toISOString(),
       recommended_curb_arrival: recommendedCurbArrival.toISOString(),
       latest_safe_bag_drop: latestSafeBagDrop,
-      latest_safe_security_entry: latestSafeSecurity.toISOString(),
+      latest_safe_security_entry: latestSafeSecurityEntry.toISOString(),
       latest_safe_gate_arrival: latestSafeGate.toISOString(),
       confidence: overallConfidence,
       confidence_score: confidenceScore,
@@ -329,7 +372,7 @@ function getPickupBuffer(rideMode: RideMode): number {
   switch (rideMode) {
     case 'rideshare': return 10;
     case 'friend_dropoff': return 5;
-    case 'self_drive': return 10; // parking buffer
+    case 'self_drive': return 10;
     case 'transit': return 15;
   }
 }

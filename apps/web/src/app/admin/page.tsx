@@ -1,16 +1,41 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Building2, Plane, Activity, Flag, Shield } from 'lucide-react';
+import { Building2, Plane, Flag, Shield } from 'lucide-react';
+import { getAdminRulesRepo, getReportRepo } from '@/lib/repositories';
+import { useHydrated } from '@/hooks/use-hydrated';
 
 const adminLinks = [
-  { href: '/admin/airports', label: 'Airport Rules', desc: 'Edit walking times, security estimates, and bag drop rules', icon: Building2, count: 10 },
-  { href: '/admin/airlines', label: 'Airline Policies', desc: 'Edit bag cutoffs, boarding times, and gate close rules', icon: Plane, count: 4 },
-  { href: '/admin/providers', label: 'Provider Status', desc: 'View data source freshness and configure priorities', icon: Activity },
-  { href: '/admin/reports', label: 'Reports & Moderation', desc: 'Review user reports and moderate content', icon: Flag, count: 2 },
+  { href: '/admin/airports', label: 'Airport Rules', desc: 'Edit walking times, security estimates, and bag drop rules', icon: Building2, count: 0 },
+  { href: '/admin/airlines', label: 'Airline Policies', desc: 'Edit bag cutoffs, boarding times, and gate close rules', icon: Plane, count: 0 },
+  { href: '/admin/reports', label: 'Reports & Moderation', desc: 'Review user reports and moderate content', icon: Flag, count: 0 },
 ];
 
 export default function AdminPage() {
+  const hydrated = useHydrated();
+  const [counts, setCounts] = useState({
+    airports: 0,
+    airlines: 0,
+    reports: 0,
+  });
+
+  useEffect(() => {
+    if (!hydrated) return;
+
+    const rulesRepo = getAdminRulesRepo();
+    const reportRepo = getReportRepo();
+    setCounts({
+      airports: rulesRepo.getAirports().length,
+      airlines: rulesRepo.getAirlines().length,
+      reports: reportRepo.getAll().filter((report) => report.status === 'pending').length,
+    });
+  }, [hydrated]);
+
+  if (!hydrated) {
+    return <div className="min-h-dvh bg-surface-secondary" />;
+  }
+
   return (
     <div className="min-h-dvh bg-surface-secondary">
       <header className="border-b border-ink-100 bg-surface-primary">
@@ -29,7 +54,14 @@ export default function AdminPage() {
 
       <div className="gs-container py-8">
         <div className="grid gap-4 sm:grid-cols-2">
-          {adminLinks.map((link) => (
+          {adminLinks.map((link) => {
+            const count =
+              link.href === '/admin/airports' ? counts.airports :
+              link.href === '/admin/airlines' ? counts.airlines :
+              link.href === '/admin/reports' ? counts.reports :
+              link.count;
+
+            return (
             <Link
               key={link.href}
               href={link.href}
@@ -41,14 +73,14 @@ export default function AdminPage() {
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <h2 className="text-base font-semibold text-ink-900">{link.label}</h2>
-                  {link.count && (
-                    <span className="gs-badge bg-ink-100 text-ink-600">{link.count}</span>
-                  )}
+                  {count ? (
+                    <span className="gs-badge bg-ink-100 text-ink-600">{count}</span>
+                  ) : null}
                 </div>
                 <p className="mt-1 text-sm text-ink-500">{link.desc}</p>
               </div>
             </Link>
-          ))}
+          );})}
         </div>
       </div>
     </div>

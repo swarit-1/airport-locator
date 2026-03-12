@@ -1,23 +1,74 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, Save } from 'lucide-react';
-import { airlines, airlinePolicies } from '@/lib/demo-data';
+import { ChevronLeft, Save, CheckCircle2 } from 'lucide-react';
+import { getAdminRulesRepo, type AirlinePolicy } from '@/lib/repositories';
+import { useHydrated } from '@/hooks/use-hydrated';
+
+type SaveState = 'idle' | 'dirty' | 'saved';
+
+const fields: Array<{ field: keyof AirlinePolicy; label: string }> = [
+  { field: 'bag_drop_cutoff_minutes', label: 'Bag drop cutoff' },
+  { field: 'boarding_begins_minutes', label: 'Boarding begins' },
+  { field: 'gate_close_minutes', label: 'Gate closes' },
+  { field: 'recommended_checkin_minutes', label: 'Recommended check-in' },
+];
 
 export default function AdminAirlinesPage() {
+  const hydrated = useHydrated();
+  const [airlines, setAirlines] = useState<ReturnType<ReturnType<typeof getAdminRulesRepo>['getAirlines']>>([]);
   const [editingAirline, setEditingAirline] = useState<string | null>(null);
-  const [policies, setPolicies] = useState(airlinePolicies);
+  const [policies, setPolicies] = useState<AirlinePolicy[]>([]);
+  const [saveState, setSaveState] = useState<Record<string, SaveState>>({});
 
-  const updatePolicy = (iata: string, flightType: string, field: string, value: number) => {
-    setPolicies((prev) =>
-      prev.map((p) =>
-        p.airline_iata === iata && p.flight_type === flightType
-          ? { ...p, [field]: value }
-          : p,
+  useEffect(() => {
+    if (!hydrated) return;
+
+    const repo = getAdminRulesRepo();
+    const nextAirlines = repo.getAirlines();
+    setAirlines(nextAirlines);
+    setPolicies(repo.getAirlinePolicies());
+    setEditingAirline((previous) => previous ?? nextAirlines[0]?.iata_code ?? null);
+  }, [hydrated]);
+
+  const grouped = useMemo(() => {
+    return airlines.map((airline) => ({
+      airline,
+      domestic: policies.find((policy) => policy.airline_iata === airline.iata_code && policy.flight_type === 'domestic'),
+      international: policies.find((policy) => policy.airline_iata === airline.iata_code && policy.flight_type === 'international'),
+    }));
+  }, [airlines, policies]);
+
+  const updatePolicy = (iata: string, flightType: AirlinePolicy['flight_type'], field: keyof AirlinePolicy, value: number) => {
+    setPolicies((previous) =>
+      previous.map((policy) =>
+        policy.airline_iata === iata && policy.flight_type === flightType
+          ? { ...policy, [field]: value }
+          : policy,
       ),
     );
+    setSaveState((previous) => ({ ...previous, [`${iata}-${flightType}`]: 'dirty' }));
   };
+
+  const savePolicy = (iata: string, flightType: AirlinePolicy['flight_type']) => {
+    const repo = getAdminRulesRepo();
+    const policy = policies.find((item) => item.airline_iata === iata && item.flight_type === flightType);
+    if (!policy) return;
+
+    const valid = fields.every(({ field }) => Number.isFinite(policy[field] as number) && (policy[field] as number) >= 0);
+    if (!valid) return;
+
+    repo.updateAirlinePolicy(iata, flightType, policy);
+    setSaveState((previous) => ({ ...previous, [`${iata}-${flightType}`]: 'saved' }));
+    window.setTimeout(() => {
+      setSaveState((previous) => ({ ...previous, [`${iata}-${flightType}`]: 'idle' }));
+    }, 1400);
+  };
+
+  if (!hydrated) {
+    return <div className="min-h-dvh bg-surface-secondary" />;
+  }
 
   return (
     <div className="min-h-dvh bg-surface-secondary">
@@ -26,78 +77,80 @@ export default function AdminAirlinesPage() {
           <Link href="/admin" className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-surface-secondary transition-colors -ml-2">
             <ChevronLeft className="h-5 w-5 text-ink-600" />
           </Link>
-          <h1 className="text-lg font-bold text-ink-900">Airline Policies</h1>
+          <div>
+            <h1 className="text-lg font-bold text-ink-900">Airline policies</h1>
+            <p className="text-sm text-ink-500">Edit the timing rules the recommendation engine actually uses.</p>
+          </div>
         </div>
       </header>
 
       <div className="gs-container py-6">
         <div className="space-y-4">
-          {airlines.map((airline) => {
-            const isOpen = editingAirline === airline.iata_code;
-            const domesticPolicy = policies.find(
-              (p) => p.airline_iata === airline.iata_code && p.flight_type === 'domestic',
-            );
-            const intlPolicy = policies.find(
-              (p) => p.airline_iata === airline.iata_code && p.flight_type === 'international',
-            );
+          {grouped.map(({ airline, domestic, international }) => {
+            const open = editingAirline === airline.iata_code;
 
             return (
-              <div key={airline.iata_code} className="rounded-xl border border-ink-200 bg-surface-primary overflow-hidden">
+              <section key={airline.iata_code} className="overflow-hidden rounded-3xl border border-ink-200 bg-white">
                 <button
-                  onClick={() => setEditingAirline(isOpen ? null : airline.iata_code)}
-                  className="flex w-full items-center gap-3 p-4 text-left hover:bg-surface-secondary transition-colors"
+                  onClick={() => setEditingAirline(open ? null : airline.iata_code)}
+                  className="flex w-full items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-surface-secondary"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-secondary font-bold text-sm text-ink-700">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-secondary text-sm font-bold text-ink-700">
                     {airline.iata_code}
                   </div>
                   <div className="flex-1">
                     <div className="text-sm font-semibold text-ink-900">{airline.name}</div>
+                    <div className="text-xs text-ink-500">Editable policy snapshots for domestic and international trips</div>
                   </div>
-                  <span className="text-xs text-ink-400">{isOpen ? 'Close' : 'Edit'}</span>
+                  <span className="text-xs text-ink-400">{open ? 'Collapse' : 'Edit policy'}</span>
                 </button>
 
-                {isOpen && (
-                  <div className="border-t border-ink-100 p-4 space-y-6">
-                    {[
-                      { policy: domesticPolicy, type: 'domestic', label: 'Domestic' },
-                      { policy: intlPolicy, type: 'international', label: 'International' },
-                    ].map(({ policy, type, label }) =>
+                {open && (
+                  <div className="border-t border-ink-100 px-5 py-5">
+                    {[{ policy: domestic, type: 'domestic' as const, label: 'Domestic' }, { policy: international, type: 'international' as const, label: 'International' }].map(({ policy, type, label }) => (
                       policy ? (
-                        <div key={type}>
-                          <h3 className="text-sm font-semibold text-ink-700 mb-3">{label}</h3>
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            {[
-                              { field: 'bag_drop_cutoff_minutes', label: 'Bag drop cutoff (min before departure)' },
-                              { field: 'boarding_begins_minutes', label: 'Boarding begins (min before departure)' },
-                              { field: 'gate_close_minutes', label: 'Gate closes (min before departure)' },
-                              { field: 'recommended_checkin_minutes', label: 'Recommended check-in (min before)' },
-                            ].map(({ field, label: fieldLabel }) => (
-                              <div key={field}>
-                                <label className="text-xs text-ink-500 block mb-1">{fieldLabel}</label>
+                        <div key={type} className="mb-6 rounded-2xl bg-surface-secondary p-4 last:mb-0">
+                          <div className="mb-4 flex items-center justify-between gap-4">
+                            <div>
+                              <h2 className="text-sm font-semibold text-ink-900">{label}</h2>
+                              <p className="text-xs text-ink-500">{policy.notes ?? 'No notes for this policy snapshot.'}</p>
+                            </div>
+                            <div className="text-xs font-medium text-ink-500">
+                              {saveState[`${airline.iata_code}-${type}`] === 'dirty' && 'Unsaved changes'}
+                              {saveState[`${airline.iata_code}-${type}`] === 'saved' && (
+                                <span className="inline-flex items-center gap-1 text-success-500">
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  Saved
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="grid gap-3 md:grid-cols-2">
+                            {fields.map(({ field, label: fieldLabel }) => (
+                              <label key={field} className="block">
+                                <span className="mb-1 block text-xs text-ink-500">{fieldLabel}</span>
                                 <input
                                   type="number"
-                                  value={(policy as unknown as Record<string, number>)[field]}
-                                  onChange={(e) =>
-                                    updatePolicy(airline.iata_code, type, field, parseInt(e.target.value) || 0)
-                                  }
+                                  min={0}
+                                  value={policy[field] as number}
+                                  onChange={(event) => updatePolicy(airline.iata_code, type, field, Math.max(0, Number(event.target.value) || 0))}
                                   className="gs-input !py-2 !text-sm"
                                 />
-                              </div>
+                              </label>
                             ))}
                           </div>
-                          {policy.notes && (
-                            <p className="mt-2 text-xs text-ink-400 italic">{policy.notes}</p>
-                          )}
+
+                          <button onClick={() => savePolicy(airline.iata_code, type)} className="gs-btn-primary mt-4 gap-2 text-sm !px-4 !py-2">
+                            <Save className="h-4 w-4" />
+                            Save {label.toLowerCase()} policy
+                          </button>
                         </div>
-                      ) : null,
-                    )}
-                    <button className="gs-btn-primary gap-2 text-sm !px-4 !py-2">
-                      <Save className="h-4 w-4" />
-                      Save changes
-                    </button>
+                      ) : null
+                    ))}
                   </div>
                 )}
-              </div>
+              </section>
             );
           })}
         </div>

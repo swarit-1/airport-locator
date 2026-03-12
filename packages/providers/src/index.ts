@@ -16,6 +16,10 @@ export { MockRideLinkProvider } from './mock/ride-link';
 export { MockCostEstimateProvider } from './mock/cost-estimate';
 export { MockNotificationProvider } from './mock/notification';
 
+// Live/scaffolded adapters
+export { GoogleRoutesTrafficProvider } from './adapters/google-routes-traffic';
+export { FlightAwareCompatibleFlightProvider } from './adapters/flightaware-compatible';
+
 // Recommendation engine
 export { RecommendationEngine } from './engine/recommendation';
 export { CircleMatcher } from './engine/circle-matcher';
