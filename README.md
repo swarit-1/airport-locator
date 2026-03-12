@@ -90,6 +90,32 @@ To opt into the unfinished Supabase adapter layer, set `NEXT_PUBLIC_USE_SUPABASE
 | `npm run lint` | Lint everything |
 | `npm test` | Run tests |
 
+## Vercel Deployment
+
+This repo is a monorepo. The deployable Next.js app lives in `apps/web`.
+
+Use these Vercel project settings:
+
+1. **Root Directory**: `apps/web`
+2. **Framework Preset**: `Next.js`
+3. **Install Command**: `npm install`
+4. **Build Command**: leave default, or set `npm run build`
+5. **Output Directory**: leave empty
+6. **Node.js**: `20.x` or newer
+
+The current error:
+
+`No Output Directory named "public" found`
+
+means Vercel imported the repo as a generic static project instead of a Next.js app. Setting the Root Directory to `apps/web` fixes that. The checked-in `apps/web/vercel.json` reinforces the framework/build settings once the project root is correct.
+
+Required environment variables depend on the mode you want:
+
+- Demo mode only: no external API keys required
+- Live flight lookup: `FEATURE_LIVE_FLIGHT=true`, `FLIGHTAWARE_API_KEY`
+- Live traffic/geocoding: `FEATURE_LIVE_TRAFFIC=true`, `GOOGLE_MAPS_API_KEY`
+- Supabase mode: set the Supabase vars from `.env.example` and `NEXT_PUBLIC_USE_SUPABASE=true`
+
 ## Supabase Setup (Optional)
 
 The app works without Supabase using persisted demo data. A Supabase repository adapter scaffold exists, but it is not fully wired for CRUD yet. To prepare for Supabase later:
