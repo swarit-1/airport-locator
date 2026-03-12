@@ -5,17 +5,17 @@
 export const colors = {
   // Brand
   brand: {
-    50: '#EBF2FF',
-    100: '#D6E4FF',
-    200: '#ADC8FF',
-    300: '#84ADFF',
-    400: '#5B91FF',
-    500: '#2563EB', // Signature brand blue
-    600: '#1D4ED8',
-    700: '#1E40AF',
-    800: '#1E3A8A',
-    900: '#172554',
-    950: '#0F172A',
+    50: '#EAF0FF',
+    100: '#D8E2FB',
+    200: '#B7C7F1',
+    300: '#8EA7E1',
+    400: '#5F7FC7',
+    500: '#1E4AA8', // Signature brand blue
+    600: '#173B87',
+    700: '#12306D',
+    800: '#10295C',
+    900: '#0E2249',
+    950: '#08162F',
   },
   // Ink (text)
   ink: {
@@ -134,7 +134,7 @@ export const shadows = {
   xl: '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.04)',
   inner: 'inset 0 2px 4px 0 rgb(0 0 0 / 0.04)',
   // Branded shadow for key CTAs
-  brand: '0 4px 14px 0 rgb(37 99 235 / 0.25)',
+  brand: '0 10px 24px 0 rgb(30 74 168 / 0.22)',
 } as const;
 
 // ─── Borders ──────────────────────────────────────────────────────────
@@ -148,8 +148,8 @@ export const borders = {
     default: '#E2E8F0',
     subtle: '#F1F5F9',
     strong: '#CBD5E1',
-    brand: '#2563EB',
-    focus: '#2563EB',
+    brand: '#1E4AA8',
+    focus: '#1E4AA8',
   },
 } as const;
 

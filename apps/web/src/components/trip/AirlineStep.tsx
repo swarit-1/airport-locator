@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Search } from 'lucide-react';
 import { StepShell } from './StepShell';
+import { AirlineLogo } from './AirlineLogo';
 import type { AirlineRule } from '@/lib/repositories';
 
 interface AirlineStepProps {
@@ -13,10 +14,10 @@ interface AirlineStepProps {
 }
 
 const AIRLINE_TONES: Record<string, string> = {
-  AA: 'bg-[#f5e8e4] text-[#8f3d24]',
-  DL: 'bg-[#e8efff] text-[#234cb7]',
-  UA: 'bg-[#e8ecf4] text-[#274168]',
-  WN: 'bg-[#fbf0dc] text-[#9b5a08]',
+  AA: 'bg-[#f8ece8]',
+  DL: 'bg-[#e8efff]',
+  UA: 'bg-[#ebeff4]',
+  WN: 'bg-[#fbf0dc]',
 };
 
 export function AirlineStep({ airlines, selected, onSelect }: AirlineStepProps) {
@@ -63,8 +64,8 @@ export function AirlineStep({ airlines, selected, onSelect }: AirlineStepProps) 
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`flex h-11 min-w-11 items-center justify-center rounded-full text-sm font-bold ${AIRLINE_TONES[airline.iata_code] ?? 'bg-black/5 text-ink-700'}`}>
-                    {airline.iata_code}
+                  <div className={`flex h-12 min-w-12 items-center justify-center rounded-full ${AIRLINE_TONES[airline.iata_code] ?? 'bg-black/5'}`}>
+                    <AirlineLogo iata={airline.iata_code} className="h-7 w-7" />
                   </div>
                   <span className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-400 sm:hidden">
                     Airline

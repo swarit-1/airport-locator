@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Crosshair, Loader2, LocateFixed, Sparkles } from 'lucide-react';
+import { CheckCircle2, Crosshair, Loader2, LocateFixed, Sparkles } from 'lucide-react';
 import { StepShell } from './StepShell';
+import { AirlineLogo } from './AirlineLogo';
 import type { AirportRule } from '@/lib/repositories';
 import {
   DEFAULT_DEPARTURE_TIME,
@@ -18,6 +19,7 @@ type ResolveStatus = {
 
 interface FlightStepProps {
   form: {
+    airline_iata: string;
     airline_name: string;
     flight_number: string;
     departure_date: string;
@@ -128,8 +130,12 @@ export function FlightStep({
             <label className="block">
               <span className="gs-label">Flight number</span>
               <div className="flex items-center gap-2">
-                <span className="flex h-12 items-center rounded-full bg-[#edf1f7] px-4 text-sm font-semibold text-ink-700">
-                  {form.airline_name?.split(' ')[0] ?? 'Airline'}
+                <span className="flex h-12 min-w-12 items-center justify-center rounded-full bg-[#edf1f7] px-3 text-sm font-semibold text-ink-700">
+                  {form.airline_iata ? (
+                    <AirlineLogo iata={form.airline_iata} className="h-6 w-6" />
+                  ) : (
+                    'Air'
+                  )}
                 </span>
                 <input
                   id="flight_number"
@@ -167,12 +173,21 @@ export function FlightStep({
               <button
                 onClick={onResolveFlight}
                 disabled={!form.flight_number.trim() || !form.departure_date || flightLookup.status === 'loading'}
-                className="gs-btn-secondary w-full gap-2 !rounded-full sm:w-auto"
+                className={`w-full gap-2 !rounded-full sm:w-auto ${
+                  flightLookup.status === 'resolved'
+                    ? 'gs-btn-primary !bg-brand-600 hover:!bg-brand-700'
+                    : 'gs-btn-secondary'
+                }`}
               >
                 {flightLookup.status === 'loading' ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Looking up flight
+                  </>
+                ) : flightLookup.status === 'resolved' ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4" />
+                    Flight resolved
                   </>
                 ) : (
                   <>
@@ -186,6 +201,28 @@ export function FlightStep({
               <p className={`mt-3 text-sm ${flightLookup.status === 'error' ? 'text-warning-500' : 'text-ink-500'}`}>
                 {flightLookup.message}
               </p>
+            ) : null}
+            {flightLookup.status === 'resolved' ? (
+              <div className="mt-4 rounded-[1.5rem] bg-brand-50 px-4 py-4 text-sm text-brand-800">
+                <div className="flex items-center gap-2 font-semibold">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Autofill applied
+                </div>
+                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-600/80">Airport</div>
+                    <div className="mt-1">{selectedAirport?.iata_code ?? form.airport_iata}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-600/80">Departure</div>
+                    <div className="mt-1">{form.departure_time}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-600/80">Terminal / gate</div>
+                    <div className="mt-1">{form.terminal ?? 'TBD'} · {form.gate ?? 'TBD'}</div>
+                  </div>
+                </div>
+              </div>
             ) : null}
           </div>
         </section>

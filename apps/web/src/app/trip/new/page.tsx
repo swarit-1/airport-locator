@@ -234,8 +234,8 @@ export default function NewTripPage() {
       });
       setFlightLookup({
         status: 'resolved',
-        sourceLabel: flight.source_name,
-        message: `${flight.airport_iata} at ${formatReadableTime(flight.departure_time)}${flight.delay_minutes > 0 ? `, delayed ${flight.delay_minutes} min` : ''}.`,
+        sourceLabel: `${flight.source_name}${flight.source_type === 'mock' ? ' · demo mode' : ''}`,
+        message: `${flight.airport_iata} at ${formatReadableTime(flight.departure_time)}${flight.delay_minutes > 0 ? `, delayed ${flight.delay_minutes} min` : ''}. ${flight.source_type === 'mock' ? 'Using deterministic demo flight data.' : 'Using live flight data.'}`,
       });
     } catch (error) {
       setFlightLookup({

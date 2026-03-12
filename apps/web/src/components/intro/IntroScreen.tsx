@@ -24,13 +24,13 @@ export function IntroScreen({ onComplete }: IntroScreenProps) {
       return;
     }
 
-    const holdTimer = window.setTimeout(() => setReady(true), prefersReducedMotion ? 100 : 280);
+    const holdTimer = window.setTimeout(() => setReady(true), prefersReducedMotion ? 120 : 420);
     const autoAdvance = window.setTimeout(() => {
       if (typeof window !== 'undefined') {
         window.sessionStorage.setItem('gateshare-intro-seen', '1');
       }
       onComplete();
-    }, prefersReducedMotion ? 320 : 860);
+    }, prefersReducedMotion ? 360 : 1240);
 
     return () => {
       window.clearTimeout(holdTimer);
@@ -52,13 +52,13 @@ export function IntroScreen({ onComplete }: IntroScreenProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 cursor-pointer select-none overflow-hidden bg-[#1f5ae4] text-white"
+      className="fixed inset-0 z-50 cursor-pointer select-none overflow-hidden bg-[#173b87] text-white"
       onClick={skip}
       role="button"
       tabIndex={0}
       aria-label="Skip intro"
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(255,255,255,0.18),transparent_32%),radial-gradient(circle_at_85%_80%,rgba(255,255,255,0.12),transparent_28%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(255,255,255,0.14),transparent_34%),radial-gradient(circle_at_85%_80%,rgba(255,255,255,0.08),transparent_30%)]" />
       <div className="gs-container relative flex min-h-dvh flex-col justify-between py-10 sm:py-12">
         <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.28em] text-white/62">
           <span>GateShare</span>
@@ -74,7 +74,7 @@ export function IntroScreen({ onComplete }: IntroScreenProps) {
               ease: [0.22, 1, 0.36, 1],
             }}
           >
-            <div className="max-w-4xl text-[clamp(3.5rem,11vw,7.5rem)] font-semibold leading-[0.92] tracking-[-0.05em]">
+            <div className="max-w-4xl text-[clamp(3.5rem,11vw,7.5rem)] font-semibold leading-[0.92] tracking-[-0.05em] text-white/90">
               Let&apos;s move
             </div>
           </motion.div>
@@ -87,7 +87,7 @@ export function IntroScreen({ onComplete }: IntroScreenProps) {
               duration: prefersReducedMotion ? 0.14 : 0.45,
               ease: [0.22, 1, 0.36, 1],
             }}
-            className="max-w-sm justify-self-start text-sm leading-relaxed text-white/78 lg:justify-self-end"
+            className="max-w-sm justify-self-start text-sm leading-relaxed text-white/68 lg:justify-self-end"
           >
             Flight-aware timing first. Shared rides only if the timing still works for everyone.
           </motion.div>
@@ -97,7 +97,7 @@ export function IntroScreen({ onComplete }: IntroScreenProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: prefersReducedMotion ? 0 : 0.45, duration: 0.25 }}
-          className="text-sm text-white/58"
+          className="text-sm text-white/42"
         >
           Tap, click, or press Enter to skip
         </motion.div>
