@@ -1,5 +1,5 @@
 import type { Config } from 'tailwindcss';
-import { colors, radii, shadows, typography } from '@gateshare/tokens';
+import { colors, radii, shadows, typography } from '@boarding/tokens';
 
 const config: Config = {
   content: [

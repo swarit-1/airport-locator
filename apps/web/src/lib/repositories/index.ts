@@ -51,7 +51,10 @@ export type {
   StoredCircleMember,
   StoredMessage,
   StoredReport,
+  StoredProfile,
+  DemoSession,
   ReportStatus,
+  ProfileRepository,
 } from './types';
 
 // Singletons — survive across navigation

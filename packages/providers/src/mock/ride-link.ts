@@ -1,4 +1,4 @@
-import type { GeoPoint, RideLink } from '@gateshare/domain';
+import type { GeoPoint, RideLink } from '@boarding/domain';
 import type { RideLinkProvider } from '../interfaces';
 
 export class MockRideLinkProvider implements RideLinkProvider {

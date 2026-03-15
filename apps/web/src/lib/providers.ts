@@ -7,7 +7,7 @@ import {
   MockNotificationProvider,
   RecommendationEngine,
   CircleMatcher,
-} from '@gateshare/providers';
+} from '@boarding/providers';
 
 // For MVP, all providers are mocks. Feature flags will switch to real adapters.
 export const trafficProvider = new MockTrafficProvider();

@@ -18,7 +18,7 @@ export const config = {
     flightAwareApiKey: process.env.FLIGHTAWARE_API_KEY ?? '',
   },
   app: {
-    name: 'GateShare',
+    name: 'Boarding',
     tagline: 'never miss a flight again',
     url: process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
   },

@@ -1,4 +1,4 @@
-import type { GeoPoint, CostEstimate } from '@gateshare/domain';
+import type { GeoPoint, CostEstimate } from '@boarding/domain';
 import type { CostEstimateProvider } from '../interfaces';
 
 export class MockCostEstimateProvider implements CostEstimateProvider {

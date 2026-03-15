@@ -1,4 +1,4 @@
-import type { FlightInfo } from '@gateshare/domain';
+import type { FlightInfo } from '@boarding/domain';
 import type { FlightProvider } from '../interfaces';
 
 type MockFlightSeed = {

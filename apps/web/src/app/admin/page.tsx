@@ -43,7 +43,7 @@ export default function AdminPage() {
           <Shield className="h-5 w-5 text-brand-500" />
           <div>
             <h1 className="text-xl font-bold text-ink-900">Admin</h1>
-            <p className="text-sm text-ink-500">GateShare operations</p>
+            <p className="text-sm text-ink-500">Boarding operations</p>
           </div>
           <div className="flex-1" />
           <Link href="/" className="text-sm text-ink-500 hover:text-ink-700 transition-colors">

@@ -5,7 +5,7 @@ import type {
   RideLink,
   CostEstimate,
   GeoPoint,
-} from '@gateshare/domain';
+} from '@boarding/domain';
 
 export interface TrafficProvider {
   getTrafficEstimate(

@@ -102,7 +102,7 @@ export function FlightStep({
   return (
     <StepShell
       title="Flight number first. Manual control stays open."
-      subtitle={`Flying ${form.airline_name || 'with your airline'}. Add a flight number and date, then let GateShare try to resolve the airport and departure details before you fine-tune the origin.`}
+      subtitle={`Flying ${form.airline_name || 'with your airline'}. Add a flight number and date, then let Boarding try to resolve the airport and departure details before you fine-tune the origin.`}
       step={2}
       onBack={onBack}
       footer={

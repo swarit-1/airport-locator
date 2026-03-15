@@ -6,7 +6,7 @@ import {
   ChevronDown, ChevronUp, AlertTriangle,
   Car, Shield, MapPin, Users, Share2, ExternalLink, Copy,
 } from 'lucide-react';
-import type { Recommendation } from '@gateshare/domain';
+import type { Recommendation } from '@boarding/domain';
 import Link from 'next/link';
 
 export interface RideLink {

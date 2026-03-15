@@ -1,21 +1,72 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, User, Mail, Phone, Shield, Clock, Settings, LogOut } from 'lucide-react';
+import { ChevronLeft, User, Mail, Settings, LogOut, CheckCircle2, Loader2 } from 'lucide-react';
+import type { StoredProfile } from '@/lib/repositories/types';
+
+type SaveState = 'idle' | 'saving' | 'saved';
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState({
-    display_name: 'Demo User',
-    email: 'demo@gateshare.app',
-    phone: '',
-    has_tsa_precheck: true,
-    has_clear: false,
-    default_risk_profile: 'balanced',
-    default_ride_mode: 'rideshare',
-    completed_trips: 3,
-    email_verified: true,
-  });
+  const router = useRouter();
+  const [profile, setProfile] = useState<StoredProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
+
+  useEffect(() => {
+    fetch('/api/auth/profile')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.profile) {
+          setProfile(data.profile);
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    if (!profile) return;
+    setSaveState('saving');
+
+    try {
+      const res = await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profile),
+      });
+      const data = await res.json();
+      if (data.profile) {
+        setProfile(data.profile);
+      }
+      setSaveState('saved');
+      window.setTimeout(() => setSaveState('idle'), 1500);
+    } catch {
+      setSaveState('idle');
+    }
+  }, [profile]);
+
+  const handleLogout = useCallback(async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.push('/');
+  }, [router]);
+
+  if (loading) {
+    return <div className="min-h-dvh bg-surface-primary" />;
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center bg-surface-primary">
+        <div className="text-center">
+          <h1 className="text-xl font-bold text-ink-900">Not signed in</h1>
+          <p className="mt-2 text-sm text-ink-500">Sign in to see your profile and preferences.</p>
+          <Link href="/login" className="gs-btn-primary mt-5">Sign in</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-surface-primary">
@@ -29,7 +80,6 @@ export default function ProfilePage() {
       </header>
 
       <div className="gs-container py-8 max-w-lg space-y-8">
-        {/* Avatar / name */}
         <div className="flex items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 text-brand-600">
             <User className="h-8 w-8" />
@@ -46,17 +96,16 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Trust signals */}
         <div className="rounded-xl bg-surface-secondary p-5">
           <h3 className="text-sm font-semibold text-ink-900 mb-3">Trust signals</h3>
           <div className="flex flex-wrap gap-3">
-            <span className="gs-badge gs-badge-success">Email verified</span>
+            {profile.email_verified && <span className="gs-badge gs-badge-success">Email verified</span>}
             <span className="gs-badge gs-badge-info">{profile.completed_trips} trips completed</span>
             {profile.has_tsa_precheck && <span className="gs-badge bg-brand-100 text-brand-600">TSA PreCheck</span>}
+            {profile.has_clear && <span className="gs-badge bg-brand-100 text-brand-600">CLEAR</span>}
           </div>
         </div>
 
-        {/* Defaults */}
         <div>
           <h3 className="text-base font-semibold text-ink-900 mb-4 flex items-center gap-2">
             <Settings className="h-5 w-5 text-ink-400" />
@@ -112,10 +161,13 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Actions */}
         <div className="space-y-3 pt-4 border-t border-ink-100">
-          <button className="gs-btn-primary w-full">Save changes</button>
-          <button className="gs-btn-secondary w-full gap-2 text-error-500 border-error-200 hover:bg-error-50">
+          <button onClick={handleSave} disabled={saveState === 'saving'} className="gs-btn-primary w-full gap-2">
+            {saveState === 'saving' && <Loader2 className="h-4 w-4 animate-spin" />}
+            {saveState === 'saved' && <CheckCircle2 className="h-4 w-4" />}
+            {saveState === 'idle' ? 'Save changes' : saveState === 'saving' ? 'Saving...' : 'Saved'}
+          </button>
+          <button onClick={handleLogout} className="gs-btn-secondary w-full gap-2 text-error-500 border-error-200 hover:bg-error-50">
             <LogOut className="h-4 w-4" />
             Sign out
           </button>

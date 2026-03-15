@@ -1,4 +1,4 @@
-import type { GeoPoint, TrafficResult } from '@gateshare/domain';
+import type { GeoPoint, TrafficResult } from '@boarding/domain';
 import type { TrafficProvider } from '../interfaces';
 
 /**

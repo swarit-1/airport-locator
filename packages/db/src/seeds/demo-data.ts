@@ -13,8 +13,8 @@ export const demoCommunity = {
 };
 
 export const demoUsers = [
-  { id: '11111111-1111-1111-1111-111111111111', email: 'alice@demo.gateshare.app', display_name: 'Alice Chen' },
-  { id: '22222222-2222-2222-2222-222222222222', email: 'bob@demo.gateshare.app', display_name: 'Bob Martinez' },
+  { id: '11111111-1111-1111-1111-111111111111', email: 'alice@demo.boarding.app', display_name: 'Alice Chen' },
+  { id: '22222222-2222-2222-2222-222222222222', email: 'bob@demo.boarding.app', display_name: 'Bob Martinez' },
   { id: '33333333-3333-3333-3333-333333333333', email: 'carol@uw.edu', display_name: 'Carol Kim' },
 ];
 
@@ -25,7 +25,7 @@ const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
 export const demoTrips = [
   {
-    user_email: 'alice@demo.gateshare.app',
+    user_email: 'alice@demo.boarding.app',
     airline_iata: 'AA',
     flight_number: '1234',
     departure_date: tomorrowStr,
@@ -43,7 +43,7 @@ export const demoTrips = [
     risk_profile: 'balanced' as const,
   },
   {
-    user_email: 'bob@demo.gateshare.app',
+    user_email: 'bob@demo.boarding.app',
     airline_iata: 'DL',
     flight_number: '567',
     departure_date: tomorrowStr,
@@ -64,7 +64,7 @@ export const demoTrips = [
 
 export const demoCircles = [
   {
-    creator_email: 'alice@demo.gateshare.app',
+    creator_email: 'alice@demo.boarding.app',
     airport_iata: 'SEA',
     circle_type: 'scheduled' as const,
     visibility: 'public' as const,

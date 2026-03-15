@@ -1,4 +1,4 @@
-# GateShare — Project Context
+# Boarding — Project Context
 
 ## Stack
 - **Monorepo**: npm workspaces
@@ -60,7 +60,9 @@ All providers are mock by default. Feature flags switch to real adapters:
 - Airport/airline rules are data-driven (seeds + admin UI)
 - Recommendation engine in packages/providers/src/engine/
 - RLS policies on user-owned data
-- Demo mode works without Supabase and persists in browser local storage
+- Demo mode works without Supabase. Data persists in a file-backed JSON store (`.demo-data/store.json`) and is server-readable for SSR
+- Client mutations sync to the file store via `/api/store` so `/share/[id]` and `/circles/[id]` work in any browser
+- Cookie-based demo auth via `/api/auth/*` routes — no real authentication provider needed
 - `NEXT_PUBLIC_USE_SUPABASE` must be explicitly set to `true` before the repo layer leaves demo mode
 
 ## Current Status
@@ -82,13 +84,20 @@ All providers are mock by default. Feature flags switch to real adapters:
 - [x] Flight autofill route with live/mock fallback
 - [x] Origin resolution route with typed-address and device-location paths
 - [x] Editorial redesign of landing, intro, airline picker, and trip shell
+- [x] Server-readable demo persistence (file-backed JSON store)
+- [x] Cookie-based demo auth with profile persistence
+- [x] Server-side recommendation persistence (share pages work immediately)
+- [x] Provider status page reads real runtime state
+- [x] Airport SEO pages use @boarding/db seeds directly
 - [ ] Production Supabase integration
 - [ ] Proven production provider credentials and end-to-end live API QA
 
 ## Gotchas
 - App runs fully in demo mode without Supabase
-- Core demo persistence lives behind the repository layer, not raw arrays
-- Airport SEO pages use generateStaticParams
+- Core demo persistence is file-backed (`.demo-data/store.json`), NOT localStorage-only
+- Client components read from localStorage for speed but sync mutations to the file store via `/api/store`
+- Server components (`/share/[id]`, `/circles/[id]`, `/admin/providers`) read from the file store directly
+- Airport SEO pages use generateStaticParams with seeds from @boarding/db
 - Motion animations check prefersReducedMotion
 - All forms use native HTML inputs (not react-hook-form yet for simplicity)
 - `NEXT_PUBLIC_SUPABASE_URL` being present no longer flips repo mode on by itself

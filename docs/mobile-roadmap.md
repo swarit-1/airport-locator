@@ -9,10 +9,10 @@ The following packages are platform-agnostic and can be consumed directly:
 
 | Package | What it provides | iOS usage |
 |---------|-----------------|-----------|
-| `@gateshare/domain` | Zod schemas, TypeScript types | Import directly |
-| `@gateshare/tokens` | Colors, spacing, radii, motion values | Map to React Native StyleSheet |
-| `@gateshare/providers` | Provider interfaces and mocks | Import directly |
-| `@gateshare/config` | Feature flags, env config | Adapt for mobile env |
+| `@boarding/domain` | Zod schemas, TypeScript types | Import directly |
+| `@boarding/tokens` | Colors, spacing, radii, motion values | Map to React Native StyleSheet |
+| `@boarding/providers` | Provider interfaces and mocks | Import directly |
+| `@boarding/config` | Feature flags, env config | Adapt for mobile env |
 
 ## What Needs Native Implementation
 
@@ -43,7 +43,7 @@ packages/
 
 ```typescript
 // packages/tokens → React Native
-import { colors, spacing } from '@gateshare/tokens';
+import { colors, spacing } from '@boarding/tokens';
 
 const styles = StyleSheet.create({
   container: {

@@ -1,8 +1,8 @@
-# GateShare
+# Boarding
 
 **never miss a flight again**
 
-GateShare helps travelers figure out exactly when to leave for the airport, explains why, and then connects them with others heading the same way to share a ride.
+Boarding helps travelers figure out exactly when to leave for the airport, explains why, and then connects them with others heading the same way to share a ride.
 
 ## Quick Start
 

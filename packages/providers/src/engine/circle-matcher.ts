@@ -1,4 +1,4 @@
-import type { GeoPoint } from '@gateshare/domain';
+import type { GeoPoint } from '@boarding/domain';
 
 export interface CircleCandidate {
   circleId: string;

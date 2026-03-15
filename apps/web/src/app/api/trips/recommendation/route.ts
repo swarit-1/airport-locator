@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { airportSeeds } from '@gateshare/db';
+import { airportSeeds } from '@boarding/db';
 import { getServerTripProviders } from '@/lib/server/provider-registry';
+import { saveTrip, saveRecommendation } from '@/lib/server/demo-file-store';
 
 const RecommendationRequestSchema = z.object({
   trip_id: z.string(),
   airline_iata: z.string().min(2).max(3),
+  airline_name: z.string().min(1),
   flight_number: z.string().min(1),
   departure_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   departure_time: z.string().regex(/^\d{2}:\d{2}$/),
@@ -70,6 +72,41 @@ export async function POST(request: Request) {
       riskProfile: parsed.risk_profile,
       airportRules: parsed.airport_rules,
       airlineRules: parsed.airline_rules,
+    });
+
+    // Persist trip and recommendation server-side so share/circles pages
+    // can read them immediately without waiting for client sync.
+    saveTrip({
+      id: parsed.trip_id,
+      airline_iata: parsed.airline_iata,
+      airline_name: parsed.airline_name,
+      flight_number: parsed.flight_number,
+      departure_date: parsed.departure_date,
+      departure_time: parsed.departure_time,
+      airport_iata: parsed.airport_iata,
+      flight_type: parsed.flight_type,
+      origin_label: parsed.origin_label,
+      origin_lat: parsed.origin_lat,
+      origin_lng: parsed.origin_lng,
+      has_checked_bags: parsed.has_checked_bags,
+      bag_count: parsed.bag_count,
+      party_size: parsed.party_size,
+      has_tsa_precheck: parsed.has_tsa_precheck,
+      has_clear: parsed.has_clear,
+      traveling_with_kids: parsed.traveling_with_kids,
+      accessibility_needs: parsed.accessibility_needs,
+      ride_mode: parsed.ride_mode,
+      risk_profile: parsed.risk_profile,
+      created_at: new Date().toISOString(),
+    });
+
+    saveRecommendation({
+      ...recommendation,
+      airline_name: parsed.airline_name,
+      flight_number: parsed.flight_number,
+      airport_iata: parsed.airport_iata,
+      departure_time: parsed.departure_time,
+      departure_date: parsed.departure_date,
     });
 
     return NextResponse.json({ recommendation });

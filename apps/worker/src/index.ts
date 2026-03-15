@@ -1,5 +1,5 @@
 /**
- * GateShare Worker
+ * Boarding Worker
  *
  * Responsibilities:
  * 1. Periodically refresh recommendation data for active trips
@@ -19,7 +19,7 @@ import {
   MockWaitTimeProvider,
   RecommendationEngine,
   CircleMatcher,
-} from '@gateshare/providers';
+} from '@boarding/providers';
 
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const EXPIRE_INTERVAL_MS = 1 * 60 * 1000;  // 1 minute
@@ -55,7 +55,7 @@ async function runMatching() {
 }
 
 async function main() {
-  console.log('GateShare Worker started');
+  console.log('Boarding Worker started');
   console.log(`Refresh interval: ${REFRESH_INTERVAL_MS / 1000}s`);
   console.log(`Expire interval: ${EXPIRE_INTERVAL_MS / 1000}s`);
 

@@ -1,5 +1,5 @@
 {
-  "name": "@gateshare/worker",
+  "name": "@boarding/worker",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,9 +9,9 @@
     "lint": "echo 'ok'"
   },
   "dependencies": {
-    "@gateshare/config": "*",
-    "@gateshare/domain": "*",
-    "@gateshare/providers": "*",
+    "@boarding/config": "*",
+    "@boarding/domain": "*",
+    "@boarding/providers": "*",
     "@supabase/supabase-js": "^2.49.0"
   },
   "devDependencies": {

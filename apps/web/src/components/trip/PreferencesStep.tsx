@@ -24,7 +24,7 @@ const rideModes = [
 const riskProfiles = [
   { value: 'conservative', label: 'Play it safe', desc: 'More breathing room before boarding.', icon: Shield },
   { value: 'balanced', label: 'Balanced', desc: 'A practical margin without wasting the whole morning.', icon: Gauge },
-  { value: 'aggressive', label: 'Cut it close', desc: 'Minimal buffer. GateShare still protects hard constraints first.', icon: Zap },
+  { value: 'aggressive', label: 'Cut it close', desc: 'Minimal buffer. Boarding still protects hard constraints first.', icon: Zap },
 ];
 
 export function PreferencesStep({ form, onUpdate, onCompute, onBack, computing }: PreferencesStepProps) {
@@ -120,7 +120,7 @@ export function PreferencesStep({ form, onUpdate, onCompute, onBack, computing }
           </div>
           <div className="mt-4 space-y-4 text-sm leading-relaxed text-ink-600">
             <p>
-              GateShare always protects hard constraints first: bag cutoff, security entry, and gate arrival.
+              Boarding always protects hard constraints first: bag cutoff, security entry, and gate arrival.
             </p>
             <p>
               Your risk profile changes the softer buffer around those milestones. It does not ignore airline or airport rules.

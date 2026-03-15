@@ -2,7 +2,7 @@
 
 ## Philosophy
 
-GateShare's design is premium, calm, and intentional. Think: high-end travel utility, not startup template.
+Boarding's design is premium, calm, and intentional. Think: high-end travel utility, not startup template.
 
 ## Colors
 

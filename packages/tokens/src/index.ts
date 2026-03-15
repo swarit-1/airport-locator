@@ -1,4 +1,4 @@
-// GateShare Design Tokens
+// Boarding Design Tokens
 // Portable across web (Tailwind) and future native (React Native) apps
 
 // ─── Colors ───────────────────────────────────────────────────────────

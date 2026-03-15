@@ -13,13 +13,13 @@ export function IntroScreen({ onComplete }: IntroScreenProps) {
 
   const skip = useCallback(() => {
     if (typeof window !== 'undefined') {
-      window.sessionStorage.setItem('gateshare-intro-seen', '1');
+      window.sessionStorage.setItem('boarding-intro-seen', '1');
     }
     onComplete();
   }, [onComplete]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.sessionStorage.getItem('gateshare-intro-seen') === '1') {
+    if (typeof window !== 'undefined' && window.sessionStorage.getItem('boarding-intro-seen') === '1') {
       onComplete();
       return;
     }
@@ -27,7 +27,7 @@ export function IntroScreen({ onComplete }: IntroScreenProps) {
     const holdTimer = window.setTimeout(() => setReady(true), prefersReducedMotion ? 120 : 420);
     const autoAdvance = window.setTimeout(() => {
       if (typeof window !== 'undefined') {
-        window.sessionStorage.setItem('gateshare-intro-seen', '1');
+        window.sessionStorage.setItem('boarding-intro-seen', '1');
       }
       onComplete();
     }, prefersReducedMotion ? 360 : 1240);
@@ -61,7 +61,7 @@ export function IntroScreen({ onComplete }: IntroScreenProps) {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(255,255,255,0.14),transparent_34%),radial-gradient(circle_at_85%_80%,rgba(255,255,255,0.08),transparent_30%)]" />
       <div className="gs-container relative flex min-h-dvh flex-col justify-between py-10 sm:py-12">
         <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.28em] text-white/62">
-          <span>GateShare</span>
+          <span>Boarding</span>
           <span>never miss a flight again</span>
         </div>
 

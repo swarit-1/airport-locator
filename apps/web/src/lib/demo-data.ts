@@ -1,7 +1,7 @@
 // In-memory demo data for running without Supabase
 // This allows the app to run fully locally without any external dependencies
 
-import { airportSeeds, airportProfileSeeds, airlineSeeds, airlinePolicySeeds } from '@gateshare/db';
+import { airportSeeds, airportProfileSeeds, airlineSeeds, airlinePolicySeeds } from '@boarding/db';
 
 export interface DemoAirport {
   id: string;

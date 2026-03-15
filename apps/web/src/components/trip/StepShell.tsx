@@ -27,7 +27,7 @@ const stepCopy: Record<number, { eyebrow: string; note: string }> = {
   },
   4: {
     eyebrow: 'Risk before idle time',
-    note: 'GateShare prefers avoiding a missed flight first, then trims dead time with your risk profile.',
+    note: 'Boarding prefers avoiding a missed flight first, then trims dead time with your risk profile.',
   },
 };
 
@@ -57,12 +57,12 @@ export function StepShell({
             </button>
           ) : (
             <div className="flex h-10 items-center text-xs font-semibold uppercase tracking-[0.22em] text-ink-500">
-              GateShare
+              Boarding
             </div>
           )}
           <div className="min-w-0 flex-1">
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-500">
-              GateShare
+              Boarding
             </div>
           </div>
           {step ? (
@@ -153,7 +153,7 @@ export function StepShell({
         <footer className="sticky bottom-0 z-10 border-t border-black/6 bg-[#f4f0e8]/92 backdrop-blur-xl">
           <div className="gs-container flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="max-w-xl text-sm leading-relaxed text-ink-500">
-              Safety-first timing. If live data is unavailable, GateShare falls back gracefully and tells you when it did.
+              Safety-first timing. If live data is unavailable, Boarding falls back gracefully and tells you when it did.
             </p>
             <div className="sm:min-w-[18rem] sm:justify-end">{footer}</div>
           </div>

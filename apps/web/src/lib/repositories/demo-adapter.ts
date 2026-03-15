@@ -1,9 +1,14 @@
 /**
- * Demo adapter: deterministic seed data with browser-local persistence.
- * Persists across navigation and refresh in local development.
+ * Demo adapter: deterministic seed data with browser-local persistence
+ * AND server sync.
+ *
+ * Client reads happen from the in-memory Store (fast, synchronous).
+ * Every mutation also fires a POST to /api/store so the server-side
+ * JSON file stays in sync.  This means server components, SSR, and
+ * fresh-browser visits can read the same data.
  */
 
-import { airportSeeds, airportProfileSeeds, airlineSeeds, airlinePolicySeeds } from '@gateshare/db';
+import { airportSeeds, airportProfileSeeds, airlineSeeds, airlinePolicySeeds } from '@boarding/db';
 import type {
   AdminRulesRepository,
   AirportRule,
@@ -147,8 +152,8 @@ function seedMessages(): StoredMessage[] {
 
 function seedReports(): StoredReport[] {
   return [
-    { id: 'report-1', reporter: 'alice@demo.gateshare.app', reported_user: 'suspicious@example.com', circle_id: null, reason: 'spam', details: 'Spam messages in circle chat.', status: 'pending', created_at: FIXED_ONE_HOUR_AGO },
-    { id: 'report-2', reporter: 'bob@demo.gateshare.app', reported_user: null, circle_id: 'circle-demo-3', reason: 'inappropriate', details: 'Circle description contains inappropriate language.', status: 'pending', created_at: FIXED_TWO_HOURS_AGO },
+    { id: 'report-1', reporter: 'alice@demo.boarding.app', reported_user: 'suspicious@example.com', circle_id: null, reason: 'spam', details: 'Spam messages in circle chat.', status: 'pending', created_at: FIXED_ONE_HOUR_AGO },
+    { id: 'report-2', reporter: 'bob@demo.boarding.app', reported_user: null, circle_id: 'circle-demo-3', reason: 'inappropriate', details: 'Circle description contains inappropriate language.', status: 'pending', created_at: FIXED_TWO_HOURS_AGO },
   ];
 }
 
@@ -188,7 +193,7 @@ class Store {
   }
 }
 
-const STORAGE_KEY = 'gateshare-demo-store-v1';
+const STORAGE_KEY = 'boarding-demo-store-v1';
 
 function toSerializable(store: Store) {
   return {
@@ -246,15 +251,47 @@ function getStore(): Store {
   return _store;
 }
 
+// ─── Server sync ─────────────────────────────────────────────────────
+// Fire-and-forget POST to /api/store so the file store stays current.
+// Errors are silently logged — client reads still work from localStorage.
+
+function syncToServer(op: string, data: Record<string, unknown>) {
+  if (typeof window === 'undefined') return;
+
+  fetch('/api/store', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op, data }),
+  }).catch(() => {
+    // Silent — server sync is best-effort in demo mode
+  });
+}
+
 function updateStore(mutator: (store: Store) => void) {
   const store = getStore();
   mutator(store);
   persistStore(store);
 }
 
+// ─── Initial sync ────────────────────────────────────────────────────
+// On first client load, push the full client store to the server so
+// the file is seeded with the same data the client has.
+
+let _initialSyncDone = false;
+
+function ensureInitialSync() {
+  if (typeof window === 'undefined' || _initialSyncDone) return;
+  _initialSyncDone = true;
+
+  const store = getStore();
+  syncToServer('replaceStore', { store: toSerializable(store) });
+}
+
 // ─── Admin Rules Repository ───────────────────────────────────────────
 
 export class DemoAdminRulesRepository implements AdminRulesRepository {
+  constructor() { ensureInitialSync(); }
+
   getAirports() { return getStore().airports; }
   getAirport(iata: string) { return getStore().airports.find((a) => a.iata_code === iata); }
   getAirportProfile(iata: string, flightType: 'domestic' | 'international') {
@@ -267,6 +304,7 @@ export class DemoAdminRulesRepository implements AdminRulesRepository {
         p.airport_iata === iata && p.flight_type === flightType ? { ...p, ...updates } : p,
       );
     });
+    syncToServer('updateAirportProfile', { iata, flightType, updates });
   }
 
   getAirlines() { return getStore().airlines; }
@@ -281,16 +319,20 @@ export class DemoAdminRulesRepository implements AdminRulesRepository {
         p.airline_iata === iata && p.flight_type === flightType ? { ...p, ...updates } : p,
       );
     });
+    syncToServer('updateAirlinePolicy', { iata, flightType, updates });
   }
 }
 
 // ─── Trip Repository ──────────────────────────────────────────────────
 
 export class DemoTripRepository implements TripRepository {
+  constructor() { ensureInitialSync(); }
+
   save(trip: StoredTrip) {
     updateStore((store) => {
       store.trips.set(trip.id, trip);
     });
+    syncToServer('saveTrip', { trip });
   }
   getById(id: string) { return getStore().trips.get(id); }
 }
@@ -298,10 +340,13 @@ export class DemoTripRepository implements TripRepository {
 // ─── Recommendation Repository ────────────────────────────────────────
 
 export class DemoRecommendationRepository implements RecommendationRepository {
+  constructor() { ensureInitialSync(); }
+
   save(rec: StoredRecommendation) {
     updateStore((store) => {
       store.recommendations.set(rec.id, rec);
     });
+    syncToServer('saveRecommendation', { rec });
   }
   getById(id: string) { return getStore().recommendations.get(id); }
   getByTripId(tripId: string) {
@@ -316,6 +361,8 @@ export class DemoRecommendationRepository implements RecommendationRepository {
 // ─── Circle Repository ────────────────────────────────────────────────
 
 export class DemoCircleRepository implements CircleRepository {
+  constructor() { ensureInitialSync(); }
+
   getAll() { return Array.from(getStore().circles.values()); }
   getById(id: string) { return getStore().circles.get(id); }
   create(circle: StoredCircle) {
@@ -338,6 +385,7 @@ export class DemoCircleRepository implements CircleRepository {
         created_at: new Date().toISOString(),
       });
     });
+    syncToServer('createCircle', { circle });
   }
   join(circleId: string, member: StoredCircleMember) {
     updateStore((store) => {
@@ -365,6 +413,7 @@ export class DemoCircleRepository implements CircleRepository {
         created_at: new Date().toISOString(),
       });
     });
+    syncToServer('joinCircle', { circleId, member });
   }
   leave(circleId: string, userName: string) {
     updateStore((store) => {
@@ -386,6 +435,7 @@ export class DemoCircleRepository implements CircleRepository {
         created_at: new Date().toISOString(),
       });
     });
+    syncToServer('leaveCircle', { circleId, userName });
   }
   getMembers(circleId: string) {
     return getStore().members.filter((m) => m.circle_id === circleId && m.status === 'active');
@@ -395,6 +445,8 @@ export class DemoCircleRepository implements CircleRepository {
 // ─── Message Repository ───────────────────────────────────────────────
 
 export class DemoMessageRepository implements MessageRepository {
+  constructor() { ensureInitialSync(); }
+
   getByCircleId(circleId: string) {
     return getStore().messages
       .filter((m) => m.circle_id === circleId)
@@ -404,28 +456,35 @@ export class DemoMessageRepository implements MessageRepository {
     updateStore((store) => {
       store.messages.push(msg);
     });
+    syncToServer('sendMessage', { msg });
   }
 }
 
 // ─── Report Repository ────────────────────────────────────────────────
 
 export class DemoReportRepository implements ReportRepository {
+  constructor() { ensureInitialSync(); }
+
   getAll() { return getStore().reports; }
   create(report: StoredReport) {
     updateStore((store) => {
       store.reports.push(report);
     });
+    syncToServer('createReport', { report });
   }
   updateStatus(id: string, status: ReportStatus) {
     updateStore((store) => {
       store.reports = store.reports.map((r) => (r.id === id ? { ...r, status } : r));
     });
+    syncToServer('updateReportStatus', { id, status });
   }
 }
 
 // ─── Share Repository ─────────────────────────────────────────────────
 
 export class DemoShareRepository implements ShareRepository {
+  constructor() { ensureInitialSync(); }
+
   getRecommendation(id: string) {
     return getStore().recommendations.get(id);
   }

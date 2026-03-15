@@ -1,7 +1,7 @@
 // Repository interfaces for all persisted data access.
 // Two adapters: DemoAdapter (in-memory, localStorage) and SupabaseAdapter.
 
-import type { Recommendation, TimeBreakdownItem, ConfidenceLevel } from '@gateshare/domain';
+import type { Recommendation, TimeBreakdownItem, ConfidenceLevel } from '@boarding/domain';
 
 // ─── Airport & Airline Rules ──────────────────────────────────────────
 
@@ -199,4 +199,32 @@ export interface ReportRepository {
 
 export interface ShareRepository {
   getRecommendation(id: string): StoredRecommendation | undefined;
+}
+
+// ─── Profiles & Sessions ─────────────────────────────────────────────
+
+export interface StoredProfile {
+  id: string;
+  display_name: string;
+  email: string;
+  phone: string;
+  has_tsa_precheck: boolean;
+  has_clear: boolean;
+  default_risk_profile: 'conservative' | 'balanced' | 'aggressive';
+  default_ride_mode: 'rideshare' | 'friend_dropoff' | 'self_drive' | 'transit';
+  completed_trips: number;
+  email_verified: boolean;
+  created_at: string;
+}
+
+export interface DemoSession {
+  user_id: string;
+  display_name: string;
+  email: string;
+}
+
+export interface ProfileRepository {
+  getById(id: string): StoredProfile | undefined;
+  getByEmail(email: string): StoredProfile | undefined;
+  save(profile: StoredProfile): void;
 }

@@ -49,7 +49,7 @@ export default function CirclesPage() {
         <div className="gs-container flex items-end justify-between gap-4 py-4">
           <div>
             <Link href="/" className="text-sm text-ink-400 hover:text-ink-600 transition-colors">
-              GateShare
+              Boarding
             </Link>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink-900">Ride circles</h1>
             <p className="mt-1 text-sm text-ink-500">Find coordinated rides that still protect everyone’s airport timing.</p>

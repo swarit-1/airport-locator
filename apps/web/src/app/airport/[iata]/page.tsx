@@ -1,31 +1,31 @@
 import Link from 'next/link';
-import { ArrowRight, Clock, Car, Shield, MapPin } from 'lucide-react';
-import { airports, airportProfiles } from '@/lib/demo-data';
+import { ArrowRight, Shield, MapPin } from 'lucide-react';
+import { airportSeeds, airportProfileSeeds } from '@boarding/db';
 import { notFound } from 'next/navigation';
 
 export function generateStaticParams() {
-  return airports.map((a) => ({ iata: a.iata_code }));
+  return airportSeeds.map((a) => ({ iata: a.iata_code }));
 }
 
 export function generateMetadata({ params }: { params: { iata: string } }) {
-  const airport = airports.find((a) => a.iata_code === params.iata.toUpperCase());
+  const airport = airportSeeds.find((a) => a.iata_code === params.iata.toUpperCase());
   if (!airport) return {};
   return {
-    title: `${airport.iata_code} Airport Timing — GateShare`,
+    title: `${airport.iata_code} Airport Timing — Boarding`,
     description: `Know exactly when to leave for ${airport.name}. Get personalized timing recommendations for ${airport.iata_code}.`,
   };
 }
 
 export default function AirportPage({ params }: { params: { iata: string } }) {
   const iata = params.iata.toUpperCase();
-  const airport = airports.find((a) => a.iata_code === iata);
+  const airport = airportSeeds.find((a) => a.iata_code === iata);
   if (!airport) notFound();
 
-  const domesticProfile = airportProfiles.find(
-    (p) => p.airport_iata === iata && p.flight_type === 'domestic',
+  const domesticProfile = airportProfileSeeds.find(
+    (p) => p.iata_code === iata && p.flight_type === 'domestic',
   );
-  const intlProfile = airportProfiles.find(
-    (p) => p.airport_iata === iata && p.flight_type === 'international',
+  const intlProfile = airportProfileSeeds.find(
+    (p) => p.iata_code === iata && p.flight_type === 'international',
   );
 
   return (
@@ -34,7 +34,7 @@ export default function AirportPage({ params }: { params: { iata: string } }) {
       <div className="bg-brand-500 text-white">
         <div className="gs-container py-12 sm:py-20">
           <Link href="/" className="text-sm text-white/70 hover:text-white transition-colors">
-            &larr; GateShare
+            &larr; Boarding
           </Link>
           <h1 className="mt-4 text-3xl sm:text-5xl font-extrabold tracking-tight">
             {airport.iata_code}
@@ -106,7 +106,7 @@ export default function AirportPage({ params }: { params: { iata: string } }) {
 
         <div className="mt-12 text-center">
           <p className="text-ink-500">
-            These are GateShare&rsquo;s current estimates for {airport.iata_code}.
+            These are Boarding&rsquo;s current estimates for {airport.iata_code}.
             Your personal recommendation will factor in your specific travel details.
           </p>
           <Link href="/trip/new" className="gs-btn-primary mt-4 gap-2">

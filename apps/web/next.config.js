@@ -1,12 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: [
-    '@gateshare/ui',
-    '@gateshare/tokens',
-    '@gateshare/domain',
-    '@gateshare/providers',
-    '@gateshare/config',
-    '@gateshare/db',
+    '@boarding/ui',
+    '@boarding/tokens',
+    '@boarding/domain',
+    '@boarding/providers',
+    '@boarding/config',
+    '@boarding/db',
   ],
   experimental: {
     serverActions: {

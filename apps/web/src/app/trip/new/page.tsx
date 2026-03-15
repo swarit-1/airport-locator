@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import type { Recommendation } from '@gateshare/domain';
+import type { Recommendation } from '@boarding/domain';
 import { IntroScreen } from '@/components/intro/IntroScreen';
 import { AirlineStep } from '@/components/trip/AirlineStep';
 import { FlightStep } from '@/components/trip/FlightStep';
@@ -417,6 +417,7 @@ export default function NewTripPage() {
         body: JSON.stringify({
           trip_id: tripId,
           airline_iata: form.airline_iata,
+          airline_name: form.airline_name,
           flight_number: form.flight_number,
           departure_date: form.departure_date,
           departure_time: form.departure_time,
@@ -518,7 +519,7 @@ export default function NewTripPage() {
         <div className="flex min-h-dvh items-center justify-center px-6 text-center text-white">
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
-              GateShare
+              Boarding
             </div>
             <div className="mt-4 text-5xl font-semibold tracking-tight">
               Let&apos;s move

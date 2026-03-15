@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { colors, typography, spacing, radii, shadows, motion as motionTokens } from '@gateshare/tokens';
+import { colors, typography, spacing, radii, shadows, motion as motionTokens } from '@boarding/tokens';
 import { ArrowRight, Clock, Users, MapPin, Check, AlertTriangle, X, Loader2, Plane } from 'lucide-react';
 import Link from 'next/link';
 
@@ -13,7 +13,7 @@ export default function StyleguidePage() {
     <div className="min-h-dvh bg-surface-secondary">
       <header className="border-b border-ink-100 bg-surface-primary sticky top-0 z-10">
         <div className="gs-container flex items-center justify-between py-4">
-          <h1 className="text-xl font-bold text-ink-900">GateShare Design System</h1>
+          <h1 className="text-xl font-bold text-ink-900">Boarding Design System</h1>
           <Link href="/" className="text-sm text-ink-500 hover:text-ink-700 transition-colors">
             Back to app
           </Link>

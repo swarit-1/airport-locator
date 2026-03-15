@@ -1,4 +1,4 @@
-import { config } from '@gateshare/config';
+import { config } from '@boarding/config';
 import {
   FlightAwareCompatibleFlightProvider,
   GoogleRoutesTrafficProvider,
@@ -11,7 +11,7 @@ import {
   type RideLinkProvider,
   type TrafficProvider,
   type WaitTimeProvider,
-} from '@gateshare/providers';
+} from '@boarding/providers';
 
 type TripProviderSet = {
   trafficProvider: TrafficProvider;

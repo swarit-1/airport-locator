@@ -1,4 +1,4 @@
-import type { WaitTimeResult } from '@gateshare/domain';
+import type { WaitTimeResult } from '@boarding/domain';
 import type { WaitTimeProvider } from '../interfaces';
 
 // Deterministic mock wait times by airport
@@ -27,7 +27,7 @@ export class MockWaitTimeProvider implements WaitTimeProvider {
 
     return {
       value_minutes: value,
-      source_name: 'GateShare Historical Model',
+      source_name: 'Boarding Historical Model',
       source_type: 'fallback',
       freshness_timestamp: new Date().toISOString(),
       confidence_level: 'medium',

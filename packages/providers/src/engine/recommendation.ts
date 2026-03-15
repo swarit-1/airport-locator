@@ -9,7 +9,7 @@ import type {
   WaitTimeResult,
   TrafficResult,
   FlightInfo,
-} from '@gateshare/domain';
+} from '@boarding/domain';
 import type { TrafficProvider, FlightProvider, WaitTimeProvider } from '../interfaces';
 
 export interface AirportRules {

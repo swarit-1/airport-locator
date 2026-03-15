@@ -9,7 +9,7 @@ export default function LandingPage() {
       <header className="border-b border-black/6 bg-brand-500 text-white">
         <nav className="gs-container flex items-center justify-between py-5">
           <div>
-            <div className="text-xl font-semibold tracking-tight">GateShare</div>
+            <div className="text-xl font-semibold tracking-tight">Boarding</div>
             <div className="mt-1 text-xs font-semibold uppercase tracking-[0.24em] text-white/65">
               never miss a flight again
             </div>
@@ -33,7 +33,7 @@ export default function LandingPage() {
               never miss a flight again
             </h1>
             <p className="mt-7 max-w-2xl text-lg leading-relaxed text-white/82 sm:text-xl">
-              GateShare turns traffic, airport rules, wait-time assumptions, and your comfort level into one clear leave time. Then it shows ride circles only if they still protect the timing.
+              Boarding turns traffic, airport rules, wait-time assumptions, and your comfort level into one clear leave time. Then it shows ride circles only if they still protect the timing.
             </p>
             <div className="mt-10 flex flex-wrap gap-4">
               <Link href="/trip/new" className="gs-btn-primary gap-2 !rounded-full !bg-white !text-brand-700 hover:!bg-white/92">
@@ -123,7 +123,7 @@ export default function LandingPage() {
                 <Users className="h-5 w-5 text-brand-600" />
                 <h3 className="mt-4 text-lg font-semibold tracking-tight">Circles, not gig driving</h3>
                 <p className="mt-2 text-sm leading-relaxed text-ink-600">
-                  GateShare coordinates compatible travelers. It does not create a peer-driver marketplace or handle payments in v1.
+                  Boarding coordinates compatible travelers. It does not create a peer-driver marketplace or handle payments in v1.
                 </p>
               </div>
             </div>
@@ -218,7 +218,7 @@ export default function LandingPage() {
       <footer className="border-t border-black/6 py-10">
         <div className="gs-container flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="text-base font-semibold tracking-tight text-ink-900">GateShare</div>
+            <div className="text-base font-semibold tracking-tight text-ink-900">Boarding</div>
             <div className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-ink-400">
               never miss a flight again
             </div>

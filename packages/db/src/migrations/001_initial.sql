@@ -1,4 +1,4 @@
--- GateShare Initial Schema
+-- Boarding Initial Schema
 -- Requires PostGIS extension
 
 CREATE EXTENSION IF NOT EXISTS "postgis";

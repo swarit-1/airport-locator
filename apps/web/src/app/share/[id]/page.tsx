@@ -1,36 +1,21 @@
-'use client';
-
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Clock, MapPin, Shield, ArrowRight, Copy } from 'lucide-react';
-import { getShareRepo } from '@/lib/repositories';
-import { useHydrated } from '@/hooks/use-hydrated';
+import { Clock, MapPin, Shield, ArrowRight } from 'lucide-react';
+import { getRecommendationById } from '@/lib/server/demo-file-store';
+import { CopyShareButton } from './copy-button';
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
 export default function SharePage({ params }: { params: { id: string } }) {
-  const hydrated = useHydrated();
-  const shareRepo = getShareRepo();
-  const [recommendation, setRecommendation] = useState<ReturnType<typeof shareRepo.getRecommendation>>();
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    setRecommendation(shareRepo.getRecommendation(params.id));
-  }, [hydrated, params.id, shareRepo]);
-
-  if (!hydrated) {
-    return <div className="min-h-dvh bg-surface-primary" />;
-  }
+  const recommendation = getRecommendationById(params.id);
 
   if (!recommendation) {
     return (
       <div className="min-h-dvh flex items-center justify-center bg-surface-primary">
         <div className="text-center">
           <h1 className="text-xl font-bold text-ink-900">Recommendation not found</h1>
-          <p className="mt-2 text-sm text-ink-500">Open a trip in GateShare first, then share that recommendation.</p>
+          <p className="mt-2 text-sm text-ink-500">Open a trip in Boarding first, then share that recommendation.</p>
           <Link href="/trip/new" className="gs-btn-primary mt-5">Plan a trip</Link>
         </div>
       </div>
@@ -41,7 +26,7 @@ export default function SharePage({ params }: { params: { id: string } }) {
     <div className="min-h-dvh bg-surface-primary">
       <div className="bg-brand-500 text-white">
         <div className="gs-container py-12 sm:py-16">
-          <p className="text-sm font-medium text-white/70">Shared from GateShare</p>
+          <p className="text-sm font-medium text-white/70">Shared from Boarding</p>
           <h1 className="mt-3 text-4xl font-extrabold tracking-tight sm:text-6xl">
             Leave by {formatTime(recommendation.recommended_leave_time)}
           </h1>
@@ -87,17 +72,7 @@ export default function SharePage({ params }: { params: { id: string } }) {
               <h2 className="text-xl font-semibold text-ink-900">Why this timing works</h2>
               <p className="mt-1 text-sm text-ink-500">Built from traffic, wait times, bag rules, and your risk profile.</p>
             </div>
-            <button
-              onClick={async () => {
-                await navigator.clipboard.writeText(window.location.href);
-                setCopied(true);
-                window.setTimeout(() => setCopied(false), 1500);
-              }}
-              className="gs-btn-secondary gap-2 !px-4 !py-2 text-sm"
-            >
-              <Copy className="h-4 w-4" />
-              {copied ? 'Link copied' : 'Copy share link'}
-            </button>
+            <CopyShareButton />
           </div>
 
           <div className="mt-6 space-y-3">

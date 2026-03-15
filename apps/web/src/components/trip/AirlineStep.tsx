@@ -105,7 +105,7 @@ export function AirlineStep({ airlines, selected, onSelect }: AirlineStepProps) 
               Airline policy is the first hard constraint. Checked bags and gate-close times move the entire airport timeline earlier.
             </p>
             <p>
-              After you pick the carrier, GateShare can try to resolve the flight number and prefill the rest of the trip.
+              After you pick the carrier, Boarding can try to resolve the flight number and prefill the rest of the trip.
             </p>
           </div>
         </div>

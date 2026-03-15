@@ -2,7 +2,7 @@
 
 ## Overview
 
-GateShare is a monorepo with two apps and six packages, designed for a web-first MVP that can later share domain logic with a native iOS app.
+Boarding is a monorepo with two apps and six packages, designed for a web-first MVP that can later share domain logic with a native iOS app.
 
 ## Data Flow
 

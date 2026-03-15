@@ -1,5 +1,5 @@
-import { config } from '@gateshare/config';
-import type { ResolvedLocation } from '@gateshare/domain';
+import { config } from '@boarding/config';
+import type { ResolvedLocation } from '@boarding/domain';
 import { getDefaultOrigin } from '../trip-defaults';
 
 type ResolveTypedAddressInput = {

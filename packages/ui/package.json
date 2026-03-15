@@ -1,5 +1,5 @@
 {
-  "name": "@gateshare/ui",
+  "name": "@boarding/ui",
   "version": "0.1.0",
   "private": true,
   "main": "./src/index.ts",
@@ -9,7 +9,7 @@
     "lint": "echo 'ok'"
   },
   "dependencies": {
-    "@gateshare/tokens": "*",
+    "@boarding/tokens": "*",
     "react": "^18.3.0",
     "react-dom": "^18.3.0"
   },

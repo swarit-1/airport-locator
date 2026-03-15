@@ -1,5 +1,5 @@
 {
-  "name": "@gateshare/providers",
+  "name": "@boarding/providers",
   "version": "0.1.0",
   "private": true,
   "main": "./src/index.ts",
@@ -10,11 +10,12 @@
     "lint": "echo 'ok'"
   },
   "dependencies": {
-    "@gateshare/domain": "*",
+    "@boarding/domain": "*",
+    "next": "16.1.6",
     "zod": "^3.24.0"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
-    "vitest": "^2.1.0"
+    "vitest": "^4.1.0"
   }
 }
