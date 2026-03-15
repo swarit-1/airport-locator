@@ -2,8 +2,9 @@ import Link from 'next/link';
 import { getCircleById, getCircleMembers, getCircleMessages } from '@/lib/server/demo-file-store';
 import { CircleDetailClient } from './circle-detail-client';
 
-export default function CircleDetailPage({ params }: { params: { id: string } }) {
-  const circle = getCircleById(params.id);
+export default async function CircleDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const circle = getCircleById(id);
 
   if (!circle) {
     return (
@@ -19,8 +20,8 @@ export default function CircleDetailPage({ params }: { params: { id: string } })
     );
   }
 
-  const members = getCircleMembers(params.id);
-  const messages = getCircleMessages(params.id);
+  const members = getCircleMembers(id);
+  const messages = getCircleMessages(id);
 
   return (
     <CircleDetailClient

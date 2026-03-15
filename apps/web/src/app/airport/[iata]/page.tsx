@@ -7,8 +7,9 @@ export function generateStaticParams() {
   return airportSeeds.map((a) => ({ iata: a.iata_code }));
 }
 
-export function generateMetadata({ params }: { params: { iata: string } }) {
-  const airport = airportSeeds.find((a) => a.iata_code === params.iata.toUpperCase());
+export async function generateMetadata({ params }: { params: Promise<{ iata: string }> }) {
+  const { iata } = await params;
+  const airport = airportSeeds.find((a) => a.iata_code === iata.toUpperCase());
   if (!airport) return {};
   return {
     title: `${airport.iata_code} Airport Timing — Boarding`,
@@ -16,8 +17,9 @@ export function generateMetadata({ params }: { params: { iata: string } }) {
   };
 }
 
-export default function AirportPage({ params }: { params: { iata: string } }) {
-  const iata = params.iata.toUpperCase();
+export default async function AirportPage({ params }: { params: Promise<{ iata: string }> }) {
+  const { iata: rawIata } = await params;
+  const iata = rawIata.toUpperCase();
   const airport = airportSeeds.find((a) => a.iata_code === iata);
   if (!airport) notFound();
 

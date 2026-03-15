@@ -7,8 +7,9 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
-export default function SharePage({ params }: { params: { id: string } }) {
-  const recommendation = getRecommendationById(params.id);
+export default async function SharePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const recommendation = getRecommendationById(id);
 
   if (!recommendation) {
     return (
