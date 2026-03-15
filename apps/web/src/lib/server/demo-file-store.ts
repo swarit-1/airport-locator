@@ -183,7 +183,9 @@ function buildSeedStore(): SerializableStore {
 // ─── File I/O ────────────────────────────────────────────────────────
 
 function getStorePath(): string {
-  return path.resolve(process.cwd(), '.demo-data', 'store.json');
+  // On Vercel, process.cwd() is read-only — use /tmp instead.
+  const base = process.env.VERCEL ? '/tmp' : process.cwd();
+  return path.resolve(base, '.demo-data', 'store.json');
 }
 
 function ensureDir() {
