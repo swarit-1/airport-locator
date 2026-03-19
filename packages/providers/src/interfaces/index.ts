@@ -47,6 +47,24 @@ export interface CostEstimateProvider {
 }
 
 export interface NotificationProvider {
-  sendPush(userId: string, title: string, body: string): Promise<void>;
+  sendPush(userId: string, title: string, body: string, data?: Record<string, unknown>): Promise<void>;
   sendEmail(email: string, subject: string, html: string): Promise<void>;
+  schedulePush?(userId: string, title: string, body: string, triggerAt: Date, data?: Record<string, unknown>): Promise<string>;
+  cancelScheduled?(notificationId: string): Promise<void>;
+}
+
+export interface AirportDiningProvider {
+  getRestaurants(airportIata: string, terminal?: string, gate?: string): Promise<import('@boarding/domain').AirportRestaurant[]>;
+  getRestaurantDetail?(restaurantId: string): Promise<import('@boarding/domain').AirportRestaurantDetail>;
+}
+
+export interface CheckInProvider {
+  checkIn(airline: string, confirmationCode: string, lastName: string): Promise<import('@boarding/domain').CheckInResult>;
+  getCheckInStatus(airline: string, confirmationCode: string): Promise<import('@boarding/domain').CheckInStatus>;
+  isSupported(airline: string): boolean;
+}
+
+export interface TravelManagementProvider {
+  getUpcomingTrips(userId: string): Promise<any[]>;
+  syncTrip(tripId: string): Promise<any>;
 }

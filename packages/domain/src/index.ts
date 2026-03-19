@@ -7,3 +7,6 @@ export * from './schemas/profile';
 export * from './schemas/community';
 export * from './schemas/provider';
 export * from './schemas/common';
+export * from './schemas/dining';
+export * from './schemas/checkin';
+export * from './schemas/boarding-pass';

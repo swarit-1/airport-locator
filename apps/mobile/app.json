@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "Boarding",
+    "slug": "boarding",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "boarding",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#2563EB"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.boarding.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Boarding uses your camera to scan boarding pass barcodes",
+        "NSLocationWhenInUseUsageDescription": "Boarding uses your location to calculate drive time to the airport"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#2563EB"
+      },
+      "package": "app.boarding.mobile",
+      "permissions": ["CAMERA", "ACCESS_FINE_LOCATION"]
+    },
+    "plugins": [
+      "expo-camera",
+      "expo-notifications",
+      "expo-secure-store",
+      [
+        "expo-barcode-scanner",
+        {
+          "cameraPermission": "Boarding uses your camera to scan boarding pass barcodes"
+        }
+      ]
+    ]
+  }
+}

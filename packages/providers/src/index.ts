@@ -6,6 +6,9 @@ export type {
   RideLinkProvider,
   CostEstimateProvider,
   NotificationProvider,
+  AirportDiningProvider,
+  CheckInProvider,
+  TravelManagementProvider,
 } from './interfaces';
 
 // Mock implementations
@@ -15,6 +18,8 @@ export { MockWaitTimeProvider } from './mock/wait-time';
 export { MockRideLinkProvider } from './mock/ride-link';
 export { MockCostEstimateProvider } from './mock/cost-estimate';
 export { MockNotificationProvider } from './mock/notification';
+export { MockDiningProvider } from './mock/dining';
+export { MockCheckInProvider } from './mock/checkin';
 
 // Live/scaffolded adapters
 export { GoogleRoutesTrafficProvider } from './adapters/google-routes-traffic';
