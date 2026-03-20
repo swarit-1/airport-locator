@@ -29,6 +29,7 @@
       "package": "app.boarding.mobile",
       "permissions": ["CAMERA", "ACCESS_FINE_LOCATION"]
     },
+    "newArchEnabled": true,
     "plugins": [
       "expo-camera",
       "expo-notifications",

@@ -1,43 +1,37 @@
 /**
  * Maps @boarding/tokens (CSS-oriented) to React Native StyleSheet values.
  */
-import { colors, spacing, radii, shadows, typography, motion, layout, iconSize, zIndex } from '@boarding/tokens';
+import { colors, spacing, radii, typography, motion, layout, iconSize, zIndex } from '@boarding/tokens';
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 
-/** Convert CSS rem string to numeric px (1rem = 16px) */
-function remToPx(rem: string): number {
-  if (rem === '0') return 0;
-  const match = rem.match(/^([\d.]+)rem$/);
-  return match ? parseFloat(match[1]) * 16 : 0;
-}
-
-/** Convert CSS px string to number */
-function pxToNum(px: string): number {
-  const match = px.match(/^([\d.]+)px$/);
-  return match ? parseFloat(match[1]) : 0;
-}
-
-/** Convert CSS ms string to number */
-function msToNum(ms: string): number {
-  const match = ms.match(/^([\d.]+)ms$/);
-  return match ? parseFloat(match[1]) : 0;
+/** Convert a CSS length string to numeric px. Handles rem, px, and plain numbers. */
+function cssToNum(value: string): number {
+  if (value === '0' || value === 'none') return 0;
+  const remMatch = value.match(/^([\d.]+)rem$/);
+  if (remMatch) return parseFloat(remMatch[1]!) * 16;
+  const pxMatch = value.match(/^([\d.]+)px$/);
+  if (pxMatch) return parseFloat(pxMatch[1]!);
+  const msMatch = value.match(/^([\d.]+)ms$/);
+  if (msMatch) return parseFloat(msMatch[1]!);
+  const num = parseFloat(value);
+  return isNaN(num) ? 0 : num;
 }
 
 // ─── Colors (pass through — already hex) ──────────────────────────────
 
 export const themeColors = colors;
 
-// ─── Spacing (rem → px) ──────────────────────────────────────────────
+// ─── Spacing (rem/px → number) ───────────────────────────────────────
 
 export const themeSpacing = Object.fromEntries(
-  Object.entries(spacing).map(([k, v]) => [k, remToPx(v)]),
+  Object.entries(spacing).map(([k, v]) => [k, cssToNum(v)]),
 ) as Record<keyof typeof spacing, number>;
 
 // ─── Radii (rem → px, handle 'full') ─────────────────────────────────
 
 export const themeRadii = Object.fromEntries(
-  Object.entries(radii).map(([k, v]) => [k, v === '9999px' ? 9999 : remToPx(v)]),
+  Object.entries(radii).map(([k, v]) => [k, v === '9999px' ? 9999 : cssToNum(v)]),
 ) as Record<keyof typeof radii, number>;
 
 // ─── Shadows → RN shadow props ───────────────────────────────────────
@@ -53,9 +47,13 @@ export const themeShadows = {
 } as const;
 
 // ─── Typography ──────────────────────────────────────────────────────
+// fontSize entries are tuples: ['1rem', { lineHeight: '1.5rem' }]
 
 export const themeFontSizes = Object.fromEntries(
-  Object.entries(typography.fontSize).map(([k, v]) => [k, pxToNum(v)]),
+  Object.entries(typography.fontSize).map(([k, v]) => {
+    const sizeStr = Array.isArray(v) ? v[0] : v;
+    return [k, cssToNum(sizeStr as string)];
+  }),
 ) as Record<keyof typeof typography.fontSize, number>;
 
 export const themeFontWeights = {
@@ -76,7 +74,7 @@ export const themeFontFamilies = {
 
 export const themeMotion = {
   duration: Object.fromEntries(
-    Object.entries(motion.duration).map(([k, v]) => [k, msToNum(v)]),
+    Object.entries(motion.duration).map(([k, v]) => [k, cssToNum(v)]),
   ) as Record<keyof typeof motion.duration, number>,
   easing: motion.easing,
 };
@@ -84,14 +82,14 @@ export const themeMotion = {
 // ─── Layout ──────────────────────────────────────────────────────────
 
 export const themeLayout = {
-  tapTarget: pxToNum(layout.tapTarget.min),
+  tapTarget: cssToNum(layout.tapTarget.min),
   gutter: {
-    mobile: remToPx(layout.gutter.mobile),
-    tablet: remToPx(layout.gutter.tablet),
-    desktop: remToPx(layout.gutter.desktop),
+    mobile: cssToNum(layout.gutter.mobile),
+    tablet: cssToNum(layout.gutter.tablet),
+    desktop: cssToNum(layout.gutter.desktop),
   },
   iconSize: Object.fromEntries(
-    Object.entries(iconSize).map(([k, v]) => [k, pxToNum(v)]),
+    Object.entries(iconSize).map(([k, v]) => [k, cssToNum(v)]),
   ) as Record<keyof typeof iconSize, number>,
 };
 
