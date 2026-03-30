@@ -19,5 +19,8 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "^3.0.2"
   }
 }

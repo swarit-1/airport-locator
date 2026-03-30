@@ -15,4 +15,16 @@ config.resolver.nodeModulesPaths = [
   path.resolve(monorepoRoot, 'node_modules'),
 ];
 
+// Force the entry point to our index.js instead of expo/AppEntry.js
+// (Expo Go hardcodes AppEntry.js which breaks in hoisted monorepos)
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (moduleName === '../../App' && context.originModulePath.includes('expo/AppEntry')) {
+    return {
+      filePath: path.resolve(projectRoot, 'App.tsx'),
+      type: 'sourceFile',
+    };
+  }
+  return context.resolveRequest(context, moduleName, platform);
+};
+
 module.exports = config;

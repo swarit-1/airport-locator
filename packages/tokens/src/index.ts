@@ -5,59 +5,67 @@
 export const colors = {
   // Brand
   brand: {
-    50: '#EAF0FF',
-    100: '#D8E2FB',
-    200: '#B7C7F1',
-    300: '#8EA7E1',
-    400: '#5F7FC7',
-    500: '#1E4AA8', // Signature brand blue
-    600: '#173B87',
-    700: '#12306D',
-    800: '#10295C',
-    900: '#0E2249',
-    950: '#08162F',
+    50: '#F0F4FA',
+    100: '#D9E2F0',
+    200: '#B3C5E1',
+    300: '#8AA4C8',
+    400: '#5A7DA8',
+    500: '#1E3A6E',   // Primary — deep navy
+    600: '#17305C',
+    700: '#112548',
+    800: '#0C1A34',
+    900: '#081020',
+    950: '#040810',
   },
   // Ink (text)
   ink: {
-    900: '#0F172A',
-    800: '#1E293B',
-    700: '#334155',
-    600: '#475569',
-    500: '#64748B',
-    400: '#94A3B8',
-    300: '#CBD5E1',
-    200: '#E2E8F0',
-    100: '#F1F5F9',
-    50: '#F8FAFC',
+    900: '#1A1A2E',
+    800: '#2A2A42',
+    700: '#3D3D58',
+    600: '#5A5A72',
+    500: '#7A7A92',
+    400: '#9A9AB0',
+    300: '#BCBCCE',
+    200: '#DCDCE8',
+    100: '#EDEDF4',
+    50: '#F7F7FA',
   },
   // Surfaces
   surface: {
     primary: '#FFFFFF',
-    secondary: '#F8FAFC',
-    tertiary: '#F1F5F9',
-    warm: '#FFFBF5',
+    secondary: '#FAF8F5',   // Warm off-white
+    tertiary: '#F4F6F9',    // Cool gray
+    warm: '#FAF8F5',
+    dark: '#1A1A2E',        // For dark hero sections
     elevated: '#FFFFFF',
   },
   // Semantic
   success: {
-    500: '#16A34A',
-    100: '#DCFCE7',
-    50: '#F0FDF4',
+    500: '#3A8B6C',
+    100: '#D4EDDF',
+    50: '#EDF7F2',
   },
   warning: {
-    500: '#D97706',
-    100: '#FEF3C7',
-    50: '#FFFBEB',
+    500: '#D4A035',
+    100: '#F5EDDA',
+    50: '#FBF7EF',
   },
   error: {
-    500: '#DC2626',
-    100: '#FEE2E2',
-    50: '#FEF2F2',
+    500: '#E8655A',
+    100: '#FADDD9',
+    50: '#FDF0EE',
   },
   info: {
-    500: '#2563EB',
-    100: '#DBEAFE',
-    50: '#EFF6FF',
+    500: '#5B9BD5',
+    100: '#D9EAF5',
+    50: '#EDF4FA',
+  },
+  // Accent
+  accent: {
+    amber: '#D4A035',
+    coral: '#E8655A',
+    green: '#3A8B6C',
+    sky: '#5B9BD5',
   },
 } as const;
 
@@ -134,7 +142,7 @@ export const shadows = {
   xl: '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.04)',
   inner: 'inset 0 2px 4px 0 rgb(0 0 0 / 0.04)',
   // Branded shadow for key CTAs
-  brand: '0 10px 24px 0 rgb(30 74 168 / 0.22)',
+  brand: '0 10px 24px 0 rgb(30 58 110 / 0.22)',
 } as const;
 
 // ─── Borders ──────────────────────────────────────────────────────────
@@ -148,8 +156,8 @@ export const borders = {
     default: '#E2E8F0',
     subtle: '#F1F5F9',
     strong: '#CBD5E1',
-    brand: '#1E4AA8',
-    focus: '#1E4AA8',
+    brand: '#1E3A6E',
+    focus: '#1E3A6E',
   },
 } as const;
 

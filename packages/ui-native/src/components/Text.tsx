@@ -11,7 +11,9 @@ interface TextProps extends RNTextProps {
   align?: 'left' | 'center' | 'right';
 }
 
-const variantStyles: Record<Variant, { fontSize: number; fontWeight: string; lineHeight: number }> = {
+type FontWeight = '400' | '500' | '600' | '700' | '800';
+
+const variantStyles: Record<Variant, { fontSize: number; fontWeight: FontWeight; lineHeight: number }> = {
   hero: { fontSize: themeFontSizes.hero, fontWeight: themeFontWeights.extrabold, lineHeight: themeFontSizes.hero * 1.1 },
   h1: { fontSize: themeFontSizes['3xl'], fontWeight: themeFontWeights.bold, lineHeight: themeFontSizes['3xl'] * 1.2 },
   h2: { fontSize: themeFontSizes['2xl'], fontWeight: themeFontWeights.bold, lineHeight: themeFontSizes['2xl'] * 1.3 },
@@ -29,7 +31,7 @@ export function Text({ variant = 'body', color, weight, align, style, ...props }
       style={[
         {
           fontSize: vs.fontSize,
-          fontWeight: (weight ? themeFontWeights[weight] : vs.fontWeight) as RNTextProps['style'] extends { fontWeight?: infer W } ? W : string,
+          fontWeight: (weight ? themeFontWeights[weight] : vs.fontWeight) as FontWeight,
           lineHeight: vs.lineHeight,
           color: color ?? themeColors.ink[900],
           textAlign: align,

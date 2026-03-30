@@ -33,7 +33,7 @@ packages/config   → Env config and feature flags
 
 ## Design Principles
 - Editorial premium, calm, intentional — not a generic template
-- Signature brand blue (#2563EB), deep ink, warm surfaces
+- Signature brand navy (#1E3A6E), deep ink, warm surfaces
 - Typography and spacing create hierarchy before cards/borders
 - Mobile-first, thumb-friendly, 44px min tap targets
 - Cards only where they group distinct concepts
@@ -47,10 +47,11 @@ packages/config   → Env config and feature flags
 - Respect prefers-reduced-motion (fast crossfade fallback)
 
 ## Provider Strategy
-All providers are mock by default. Feature flags switch to real adapters:
-- Traffic: MockTrafficProvider → GoogleRoutesTrafficProvider
-- Flight: MockFlightProvider → FlightAwareCompatibleFlightProvider
-- Wait times: MockWaitTimeProvider → WaitTimeChainProvider
+Providers auto-enable when API keys are present. No feature flag gating required:
+- Traffic: MockTrafficProvider → GoogleRoutesTrafficProvider (needs GOOGLE_MAPS_API_KEY)
+- Flight: AviationStackFlightProvider → MockFlightProvider fallback (needs AVIATIONSTACK_API_KEY)
+- Geocoding: GoogleGeocodingProvider (needs GOOGLE_MAPS_API_KEY)
+- Wait times: HistoricalWaitTimeProvider (per-airport/terminal data, no API key needed)
 - Ride links: Deep links work without API keys
 - Cost estimates: Distance heuristic (real pricing needs partner API)
 - Flight lookup, origin resolution, and recommendation compute run through app route handlers so the client does not import provider logic directly

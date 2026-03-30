@@ -46,11 +46,11 @@ function TabNavigator() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: themeColors.brand[600],
-        tabBarInactiveTintColor: themeColors.ink[400],
+        tabBarActiveTintColor: '#D4A035',
+        tabBarInactiveTintColor: '#9A9AB0',
         tabBarStyle: {
-          borderTopColor: themeColors.ink[100],
-          backgroundColor: themeColors.surface.primary,
+          borderTopColor: '#EDEDF4',
+          backgroundColor: '#FFFFFF',
         },
         tabBarLabelStyle: {
           fontSize: 11,
@@ -73,10 +73,10 @@ export function RootNavigator() {
     <NavigationContainer>
       <Stack.Navigator
         screenOptions={{
-          headerStyle: { backgroundColor: themeColors.surface.primary },
-          headerTintColor: themeColors.ink[900],
+          headerStyle: { backgroundColor: '#FAF8F5' },
+          headerTintColor: '#1A1A2E',
           headerTitleStyle: { fontWeight: '700' },
-          contentStyle: { backgroundColor: themeColors.surface.secondary },
+          contentStyle: { backgroundColor: '#FAF8F5' },
         }}
       >
         <Stack.Screen name="Main" component={TabNavigator} options={{ headerShown: false }} />

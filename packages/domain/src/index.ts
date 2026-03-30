@@ -10,3 +10,4 @@ export * from './schemas/common';
 export * from './schemas/dining';
 export * from './schemas/checkin';
 export * from './schemas/boarding-pass';
+export * from './schemas/journey';
