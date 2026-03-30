@@ -15,14 +15,16 @@ config.resolver.nodeModulesPaths = [
   path.resolve(monorepoRoot, 'node_modules'),
 ];
 
-// Force the entry point to our index.js instead of expo/AppEntry.js
-// (Expo Go hardcodes AppEntry.js which breaks in hoisted monorepos)
+// Redirect expo/AppEntry.js's `../../App` import to our local App.tsx.
+// Expo is hoisted to monorepo root node_modules, so ../../App misses our project.
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  if (moduleName === '../../App' && context.originModulePath.includes('expo/AppEntry')) {
-    return {
-      filePath: path.resolve(projectRoot, 'App.tsx'),
-      type: 'sourceFile',
-    };
+  // Catch the ../../App import from AppEntry.js regardless of hoisting location
+  if (
+    moduleName === '../../App' ||
+    (moduleName.endsWith('/App') && context.originModulePath.includes('expo'))
+  ) {
+    const appPath = path.resolve(projectRoot, 'App.tsx');
+    return { filePath: appPath, type: 'sourceFile' };
   }
   return context.resolveRequest(context, moduleName, platform);
 };
