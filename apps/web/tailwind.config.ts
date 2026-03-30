@@ -22,6 +22,11 @@ const config: Config = {
         warning: colors.warning,
         error: colors.error,
         info: colors.info,
+        // New landing palette
+        accent: {
+          DEFAULT: '#C8A24E',
+          hover: '#B8922E',
+        },
       },
       borderRadius: {
         sm: radii.sm,
@@ -40,7 +45,8 @@ const config: Config = {
         brand: shadows.brand,
       },
       fontFamily: {
-        sans: [typography.fontFamily.sans],
+        sans: ['"DM Sans"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
+        display: ['"Instrument Serif"', 'Georgia', '"Times New Roman"', 'serif'],
         mono: [typography.fontFamily.mono],
       },
       fontSize: {

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,500;6..72,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Instrument+Serif:ital@0;1&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,16 +6,34 @@
 
 @layer base {
   :root {
-    --brand-500: #1E4AA8;
-    --brand-600: #173B87;
-    --brand-700: #12306D;
-    --ink-900: #0F172A;
-    --ink-600: #475569;
-    --ink-400: #94A3B8;
+    /* Core palette — warm cream, near-black, single amber accent */
+    --bg: #FAFAF8;
+    --bg-card: #FFFFFF;
+    --bg-dark: #1C1C1C;
+    --text: #1A1A1A;
+    --text-secondary: #6B7280;
+    --text-muted: #9CA3AF;
+    --accent: #C8A24E;
+    --accent-hover: #B8922E;
+    --border: #E8E8E4;
+    --border-subtle: #F0F0EC;
+
+    /* Semantic — badges only */
+    --status-green: #3A8B6C;
+    --status-amber: #C8A24E;
+    --status-red: #D4564A;
+
+    /* Legacy tokens (keep for existing components) */
+    --brand-500: #1E3A6E;
+    --brand-600: #17305C;
+    --brand-700: #112548;
+    --ink-900: #1A1A1A;
+    --ink-600: #6B7280;
+    --ink-400: #9CA3AF;
     --surface-primary: #FFFFFF;
-    --surface-secondary: #F8FAFC;
-    --border-default: #E2E8F0;
-    --border-subtle: #F1F5F9;
+    --surface-secondary: #FAFAF8;
+    --border-default: #E8E8E4;
+    --border-subtle: #F0F0EC;
   }
 
   * {
@@ -29,27 +47,36 @@
   }
 
   body {
-    @apply bg-surface-primary text-ink-900 font-sans;
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
   }
 
-  /* Custom focus styles */
   :focus-visible {
-    @apply outline-2 outline-offset-2 outline-brand-500 rounded-sm;
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
   }
 
-  /* Scrollbar styling */
   ::-webkit-scrollbar {
-    @apply w-1.5;
+    width: 6px;
   }
   ::-webkit-scrollbar-track {
-    @apply bg-transparent;
+    background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-ink-200 rounded-full;
+    background: var(--border);
+    border-radius: 999px;
   }
 }
 
 @layer components {
+  /* Display/serif font */
+  .font-display {
+    font-family: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  }
+
+  /* Container */
   .gs-container {
     @apply mx-auto w-full max-w-[1200px] px-4 sm:px-6 lg:px-8;
   }
@@ -109,21 +136,53 @@
   .gs-badge-success {
     @apply bg-success-100 text-success-500;
   }
-
   .gs-badge-warning {
     @apply bg-warning-100 text-warning-500;
   }
-
   .gs-badge-error {
     @apply bg-error-100 text-error-500;
   }
-
   .gs-badge-info {
     @apply bg-info-100 text-info-500;
   }
 
   .gs-display {
-    font-family: 'Newsreader', Georgia, serif;
+    font-family: 'Instrument Serif', Georgia, serif;
+  }
+
+  /* ─── Landing page animation utilities ─── */
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+                transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Stagger children */
+  .stagger > .reveal:nth-child(1) { transition-delay: 0ms; }
+  .stagger > .reveal:nth-child(2) { transition-delay: 80ms; }
+  .stagger > .reveal:nth-child(3) { transition-delay: 160ms; }
+  .stagger > .reveal:nth-child(4) { transition-delay: 240ms; }
+  .stagger > .reveal:nth-child(5) { transition-delay: 320ms; }
+  .stagger > .reveal:nth-child(6) { transition-delay: 400ms; }
+  .stagger > .reveal:nth-child(7) { transition-delay: 480ms; }
+  .stagger > .reveal:nth-child(8) { transition-delay: 560ms; }
+
+  /* Timeline step animation */
+  .timeline-step {
+    opacity: 0;
+    transform: translateX(-12px);
+    transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+                transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .timeline-step.visible {
+    opacity: 1;
+    transform: translateX(0);
   }
 }
 
@@ -135,6 +194,12 @@
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .timeline-step {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
   *,
   *::before,
   *::after {

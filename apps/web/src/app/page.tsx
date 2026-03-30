@@ -1,235 +1,695 @@
-import Link from 'next/link';
-import { ArrowRight, Clock3, MapPin, ShieldCheck, Users } from 'lucide-react';
+'use client';
 
-const airportCodes = ['SEA', 'LAX', 'SFO', 'DEN', 'DFW', 'ORD', 'ATL', 'JFK', 'LGA', 'MCO'];
+import { useEffect, useRef, useCallback } from 'react';
+import Link from 'next/link';
+import { airportSeeds, airportProfileSeeds } from '@boarding/db';
+
+// ─── Data ──────────────────────────────────────────────────────────────
+
+const AIRPORTS_DISPLAY = ['JFK', 'LAX', 'ORD', 'ATL', 'DEN', 'SFO', 'SEA', 'DFW'];
+
+function getSecurityLevel(iata: string): { label: string; color: string } {
+  const profile = airportProfileSeeds
+    .flat()
+    .find((p) => p.iata_code === iata && p.flight_type === 'domestic');
+  const avg = profile?.avg_security_wait_minutes ?? 18;
+  if (avg <= 18) return { label: 'Low', color: 'var(--status-green)' };
+  if (avg <= 22) return { label: 'Moderate', color: 'var(--status-amber)' };
+  return { label: 'Busy', color: 'var(--status-red)' };
+}
+
+function getCity(iata: string): string {
+  return airportSeeds.find((a) => a.iata_code === iata)?.city ?? iata;
+}
+
+const TIMELINE_STEPS = [
+  { icon: '⌂', label: 'Leave home', time: '7:15 AM', detail: null },
+  { icon: '│', label: 'Traffic', time: null, detail: '34 min · Google Routes' },
+  { icon: '✈', label: 'Arrive airport', time: '7:49 AM', detail: null },
+  { icon: '│', label: 'Security', time: null, detail: '~18 min · historical avg' },
+  { icon: '│', label: 'Walk to gate', time: null, detail: '11 min · Terminal B' },
+  { icon: '◎', label: 'At gate', time: '8:18 AM', detail: '45 min buffer · balanced' },
+];
+
+const CIRCLES_DATA = [
+  { from: 'Capitol Hill', to: 'SEA', time: '7:10 AM', riders: 3, savings: '$14' },
+  { from: 'Wicker Park', to: 'ORD', time: '5:40 AM', riders: 2, savings: '$18' },
+  { from: 'Midtown', to: 'JFK', time: '12:15 PM', riders: 4, savings: '$22' },
+];
+
+const STEPS = [
+  { num: '01', label: 'Enter your flight number' },
+  { num: '02', label: 'We pull traffic, security, gate data' },
+  { num: '03', label: 'One clear leave time' },
+  { num: '04', label: 'Share a ride if timing works' },
+];
+
+// ─── Scroll reveal hook ────────────────────────────────────────────────
+
+function useScrollReveal() {
+  const observed = useRef(new Set<Element>());
+
+  const observe = useCallback((el: HTMLElement | null) => {
+    if (!el || observed.current.has(el)) return;
+    observed.current.add(el);
+
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) {
+      el.classList.add('visible');
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            // Also reveal child .reveal and .timeline-step elements
+            entry.target.querySelectorAll('.reveal, .timeline-step').forEach((child) => {
+              child.classList.add('visible');
+            });
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -40px 0px' },
+    );
+    observer.observe(el);
+  }, []);
+
+  return observe;
+}
+
+// ─── Page ──────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
+  const observe = useScrollReveal();
+
+  // Auto-reveal hero on mount
+  const heroRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = heroRef.current;
+    if (!el) return;
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const delay = prefersReduced ? 0 : 100;
+    const timer = setTimeout(() => {
+      el.classList.add('visible');
+      el.querySelectorAll('.reveal').forEach((child) => child.classList.add('visible'));
+    }, delay);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <div className="min-h-dvh bg-[#f4f0e8] text-ink-900">
-      <header className="border-b border-black/6 bg-brand-500 text-white">
-        <nav className="gs-container flex items-center justify-between py-5">
-          <div>
-            <div className="text-xl font-semibold tracking-tight">Boarding</div>
-            <div className="mt-1 text-xs font-semibold uppercase tracking-[0.24em] text-white/65">
-              never miss a flight again
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/login" className="text-sm font-medium text-white/78 transition-colors hover:text-white">
+    <div style={{ background: 'var(--bg)', color: 'var(--text)', minHeight: '100dvh' }}>
+      {/* ─── Header ─────────────────────────────────────────── */}
+      <header
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 40,
+          background: 'var(--bg)',
+          borderBottom: '1px solid var(--border)',
+        }}
+      >
+        <div className="gs-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 56 }}>
+          <Link href="/" style={{ textDecoration: 'none', color: 'var(--text)' }}>
+            <span
+              className="font-display"
+              style={{
+                fontSize: 20,
+                fontStyle: 'italic',
+                letterSpacing: '-0.01em',
+                color: 'var(--text)',
+              }}
+            >
+              Boarding
+            </span>
+          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <Link
+              href="/login"
+              style={{
+                fontSize: 13,
+                fontWeight: 500,
+                color: 'var(--text-secondary)',
+                textDecoration: 'none',
+                transition: 'color 0.15s',
+              }}
+            >
               Sign in
             </Link>
-            <Link href="/trip/new" className="gs-btn-primary !rounded-full !bg-white !px-5 !py-2.5 !text-brand-700 hover:!bg-white/92">
-              Start a trip
-            </Link>
-          </div>
-        </nav>
-
-        <div className="gs-container grid gap-12 py-16 sm:py-20 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16 lg:py-24">
-          <div className="max-w-4xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-white/62">
-              Airport timing and shared ride coordination
-            </p>
-            <h1 className="mt-6 max-w-4xl text-[clamp(3.25rem,9vw,6.6rem)] font-semibold leading-[0.92] tracking-[-0.055em] text-white">
-              never miss a flight again
-            </h1>
-            <p className="mt-7 max-w-2xl text-lg leading-relaxed text-white/82 sm:text-xl">
-              Boarding turns traffic, airport rules, wait-time assumptions, and your comfort level into one clear leave time. Then it shows ride circles only if they still protect the timing.
-            </p>
-            <div className="mt-10 flex flex-wrap gap-4">
-              <Link href="/trip/new" className="gs-btn-primary gap-2 !rounded-full !bg-white !text-brand-700 hover:!bg-white/92">
-                Get my leave time
-                <ArrowRight className="h-5 w-5" />
-              </Link>
-              <Link href="/circles" className="gs-btn-secondary !rounded-full !border-white/25 !bg-transparent !text-white hover:!bg-white/10">
-                Browse ride circles
-              </Link>
-            </div>
-          </div>
-
-          <div className="grid gap-4 self-end">
-            <div className="rounded-[2rem] border border-white/14 bg-white/10 p-5 backdrop-blur-sm">
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/65">
-                Recommendation preview
-              </div>
-              <div className="mt-6">
-                <div className="text-sm text-white/70">Leave by</div>
-                <div className="mt-2 text-5xl font-semibold tracking-[-0.04em] text-white">11:15 AM</div>
-                <div className="mt-2 text-sm text-white/75">SEA · Delta 1286 · balanced profile</div>
-              </div>
-              <div className="mt-6 space-y-3">
-                {[
-                  ['Traffic from Capitol Hill', '34 min'],
-                  ['Security estimate', '18 min'],
-                  ['Walk to gate', '11 min'],
-                ].map(([label, value]) => (
-                  <div key={label} className="flex items-center justify-between border-t border-white/12 pt-3 text-sm">
-                    <span className="text-white/76">{label}</span>
-                    <span className="font-semibold text-white">{value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-[2rem] bg-white px-5 py-5 text-ink-900 shadow-[0_20px_60px_rgba(15,23,42,0.12)]">
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">
-                Ride circle preview
-              </div>
-              <div className="mt-4 flex items-start justify-between gap-4">
-                <div>
-                  <div className="text-lg font-semibold tracking-tight">Downtown Seattle to SEA</div>
-                  <div className="mt-1 text-sm text-ink-500">3 riders · save about $14 each · detour under 8 min</div>
-                </div>
-                <Users className="mt-1 h-5 w-5 text-brand-600" />
-              </div>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                background: 'var(--border)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
             </div>
           </div>
         </div>
       </header>
 
       <main>
-        <section className="py-20">
-          <div className="gs-container grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-600">
-                Why this is trustworthy
-              </p>
-              <h2 className="mt-4 max-w-xl text-4xl font-semibold leading-[1.02] tracking-[-0.04em] text-ink-900">
-                It shows the reasoning, not just a time.
-              </h2>
-            </div>
-            <div className="grid gap-6 sm:grid-cols-2">
-              <div className="border-t border-black/8 pt-4">
-                <Clock3 className="h-5 w-5 text-brand-600" />
-                <h3 className="mt-4 text-lg font-semibold tracking-tight">One leave time, plus a window</h3>
-                <p className="mt-2 text-sm leading-relaxed text-ink-600">
-                  The recommendation gives a single leave time, a reasonable window, and milestone timestamps you can actually act on.
-                </p>
-              </div>
-              <div className="border-t border-black/8 pt-4">
-                <ShieldCheck className="h-5 w-5 text-brand-600" />
-                <h3 className="mt-4 text-lg font-semibold tracking-tight">Safety before savings</h3>
-                <p className="mt-2 text-sm leading-relaxed text-ink-600">
-                  Ride circles only make sense if each traveler still preserves a safe airport threshold after the detour.
-                </p>
-              </div>
-              <div className="border-t border-black/8 pt-4">
-                <MapPin className="h-5 w-5 text-brand-600" />
-                <h3 className="mt-4 text-lg font-semibold tracking-tight">Airport-specific assumptions</h3>
-                <p className="mt-2 text-sm leading-relaxed text-ink-600">
-                  Walking time, security assumptions, and bag-check timing are data-driven and editable in admin, not scattered constants.
-                </p>
-              </div>
-              <div className="border-t border-black/8 pt-4">
-                <Users className="h-5 w-5 text-brand-600" />
-                <h3 className="mt-4 text-lg font-semibold tracking-tight">Circles, not gig driving</h3>
-                <p className="mt-2 text-sm leading-relaxed text-ink-600">
-                  Boarding coordinates compatible travelers. It does not create a peer-driver marketplace or handle payments in v1.
-                </p>
-              </div>
+        {/* ─── Hero ──────────────────────────────────────────── */}
+        <section
+          style={{
+            minHeight: 'calc(100dvh - 56px)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            paddingBottom: 80,
+          }}
+        >
+          <div className="gs-container stagger" ref={heroRef} style={{ maxWidth: 540, textAlign: 'center', margin: '0 auto' }}>
+            <p
+              className="reveal"
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+                color: 'var(--text-muted)',
+                marginBottom: 24,
+              }}
+            >
+              BOARDING
+            </p>
+
+            <h1
+              className="reveal font-display"
+              style={{
+                fontSize: 'clamp(2.5rem, 7vw, 3.75rem)',
+                fontStyle: 'italic',
+                lineHeight: 1.08,
+                letterSpacing: '-0.015em',
+                color: 'var(--text)',
+                marginBottom: 20,
+                fontWeight: 400,
+              }}
+            >
+              Know exactly when{'\u00A0'}to leave for the airport.
+            </h1>
+
+            <p
+              className="reveal"
+              style={{
+                fontSize: 15,
+                lineHeight: 1.6,
+                color: 'var(--text-secondary)',
+                maxWidth: 400,
+                margin: '0 auto 40px',
+              }}
+            >
+              Flight lookup &rarr; traffic &rarr; security &rarr; gate.
+              <br />
+              One leave time.
+            </p>
+
+            <div className="reveal" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+              <Link
+                href="/trip/new"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  background: 'var(--accent)',
+                  color: '#FFFFFF',
+                  fontSize: 15,
+                  fontWeight: 600,
+                  padding: '14px 32px',
+                  borderRadius: 999,
+                  textDecoration: 'none',
+                  transition: 'background 0.15s, transform 0.1s',
+                  minHeight: 48,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-hover)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--accent)'; }}
+              >
+                Let&apos;s move
+                <span style={{ fontSize: 18 }}>&rarr;</span>
+              </Link>
+
+              <Link
+                href="#airports"
+                style={{
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: 'var(--text-muted)',
+                  textDecoration: 'none',
+                  borderBottom: '1px solid transparent',
+                  transition: 'border-color 0.15s',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderBottomColor = 'var(--text-muted)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderBottomColor = 'transparent'; }}
+              >
+                or browse airports
+              </Link>
             </div>
           </div>
         </section>
 
-        <section className="border-y border-black/6 bg-white py-20">
-          <div className="gs-container grid gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:gap-16">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-600">
-                Product preview
-              </p>
-              <h2 className="mt-4 text-4xl font-semibold leading-[1.02] tracking-[-0.04em] text-ink-900">
-                The product is designed to feel decisive, not busy.
-              </h2>
-              <p className="mt-4 max-w-xl text-base leading-relaxed text-ink-600">
-                Start with the flight. Resolve what you can. Explain the recommendation in plain language. Only then invite a shared ride if it still fits.
-              </p>
-            </div>
+        {/* ─── Section A: Departure Preview ─────────────────── */}
+        <section
+          ref={observe}
+          className="reveal"
+          style={{ paddingBottom: 96 }}
+        >
+          <div className="gs-container" style={{ maxWidth: 540, margin: '0 auto' }}>
+            <p
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                color: 'var(--text-muted)',
+                marginBottom: 16,
+                textAlign: 'center',
+              }}
+            >
+              Example recommendation
+            </p>
 
-            <div className="overflow-hidden rounded-[2rem] border border-black/6 bg-[#f8f5ee]">
-              <div className="grid gap-0 border-b border-black/6 px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-ink-400 sm:grid-cols-[1.2fr_0.85fr_0.95fr]">
-                <span>Flow</span>
-                <span>Output</span>
-                <span>Intent</span>
+            {/* Dark preview card */}
+            <div
+              className="stagger"
+              style={{
+                background: '#1C1C1C',
+                borderRadius: 16,
+                padding: '28px 24px',
+                color: '#FFFFFF',
+              }}
+            >
+              {/* Flight header */}
+              <div className="reveal" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.5)' }}>
+                  AUS &rarr; SEA
+                </span>
+                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>
+                  Delta 1286 &middot; Tue, Apr 1
+                </span>
               </div>
-              {[
-                ['Airline + flight', 'Bag rules, gate timing, airport context', 'Resolve hard timing constraints first'],
-                ['Travel details', 'Origin, bags, group size, access needs', 'Adjust the path through the airport'],
-                ['Recommendation', 'Leave time, window, milestones, why this time', 'Make the timing legible and trustworthy'],
-                ['Ride circles', 'Eligible shared rides only', 'Reduce cost only when the timing still works'],
-              ].map(([label, output, intent]) => (
-                <div key={label} className="grid gap-3 border-b border-black/6 px-5 py-4 last:border-b-0 sm:grid-cols-[1.2fr_0.85fr_0.95fr]">
-                  <div className="text-base font-semibold tracking-tight text-ink-900">{label}</div>
-                  <div className="text-sm leading-relaxed text-ink-600">{output}</div>
-                  <div className="text-sm leading-relaxed text-ink-500">{intent}</div>
+
+              {/* Leave by time */}
+              <div className="reveal" style={{ marginTop: 16, marginBottom: 28 }}>
+                <div style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
+                  Leave by
                 </div>
-              ))}
+                <div className="font-display" style={{ fontSize: 40, fontStyle: 'italic', letterSpacing: '-0.02em', color: '#FFFFFF' }}>
+                  7:15 AM
+                </div>
+              </div>
+
+              {/* Timeline */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                {TIMELINE_STEPS.map((step, i) => (
+                  <div
+                    key={step.label}
+                    className="timeline-step"
+                    style={{
+                      transitionDelay: `${i * 80}ms`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '8px 0',
+                      borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.07)',
+                    }}
+                  >
+                    <span style={{ width: 18, fontSize: 13, color: 'rgba(255,255,255,0.3)', textAlign: 'center', flexShrink: 0 }}>
+                      {step.icon}
+                    </span>
+                    <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: step.time ? '#FFFFFF' : 'rgba(255,255,255,0.55)' }}>
+                      {step.label}
+                    </span>
+                    <span style={{ fontSize: 13, fontWeight: step.time ? 600 : 400, color: step.time ? 'var(--accent)' : 'rgba(255,255,255,0.4)', whiteSpace: 'nowrap' }}>
+                      {step.time ?? step.detail}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Buffer badge */}
+              <div className="reveal" style={{ marginTop: 16, display: 'flex', justifyContent: 'center' }}>
+                <span style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: 'rgba(255,255,255,0.4)',
+                  background: 'rgba(255,255,255,0.06)',
+                  padding: '5px 14px',
+                  borderRadius: 999,
+                  letterSpacing: '0.04em',
+                }}>
+                  ✓ 45 min buffer &middot; balanced
+                </span>
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="py-20">
-          <div className="gs-container grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:gap-16">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-600">
-                Coverage and data posture
+        {/* ─── Section B: Airport Grid ──────────────────────── */}
+        <section
+          id="airports"
+          ref={observe}
+          className="reveal"
+          style={{ paddingBottom: 96 }}
+        >
+          <div className="gs-container" style={{ maxWidth: 540, margin: '0 auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 20 }}>
+              <p style={{
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                color: 'var(--text-muted)',
+              }}>
+                Airports
               </p>
-              <h2 className="mt-4 text-4xl font-semibold leading-[1.02] tracking-[-0.04em] text-ink-900">
-                U.S.-only for launch, with inspectable assumptions.
-              </h2>
-              <p className="mt-4 max-w-2xl text-base leading-relaxed text-ink-600">
-                The MVP runs end to end in local demo mode. When provider keys are added, the same flow can switch to live flight lookup and traffic-backed estimates without changing the product structure.
-              </p>
+              <Link
+                href="/airport/SEA"
+                style={{
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: 'var(--text-muted)',
+                  textDecoration: 'none',
+                  borderBottom: '1px solid var(--border)',
+                  paddingBottom: 1,
+                  transition: 'color 0.15s',
+                }}
+              >
+                View all
+              </Link>
             </div>
-            <div className="flex flex-wrap content-start gap-3">
-              {airportCodes.map((code) => (
+
+            <div
+              className="stagger"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 12,
+              }}
+            >
+              {AIRPORTS_DISPLAY.map((iata, i) => {
+                const city = getCity(iata);
+                const security = getSecurityLevel(iata);
+                return (
+                  <Link
+                    key={iata}
+                    href={`/airport/${iata}`}
+                    className="reveal"
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      padding: '16px 18px',
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 12,
+                      textDecoration: 'none',
+                      color: 'inherit',
+                      transition: 'border-color 0.15s',
+                      transitionDelay: `${i * 60}ms`,
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text)' }}>
+                        {iata}
+                      </span>
+                      <span style={{
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: security.color,
+                        background: `${security.color}14`,
+                        padding: '2px 8px',
+                        borderRadius: 999,
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
+                      }}>
+                        {security.label}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                      {city}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Section C: Ride Circles ──────────────────────── */}
+        <section
+          ref={observe}
+          className="reveal"
+          style={{ paddingBottom: 96 }}
+        >
+          <div className="gs-container" style={{ maxWidth: 540, margin: '0 auto' }}>
+            <p style={{
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '0.16em',
+              textTransform: 'uppercase',
+              color: 'var(--text-muted)',
+              marginBottom: 6,
+            }}>
+              Ride Circles
+            </p>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.5 }}>
+              Share rides to the airport. Only when timing works.
+            </p>
+
+            <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {CIRCLES_DATA.map((circle, i) => (
                 <Link
-                  key={code}
-                  href={`/airport/${code}`}
-                  className="rounded-full border border-black/8 bg-white px-4 py-2 text-sm font-semibold text-ink-800 transition-colors hover:border-brand-500 hover:text-brand-700"
+                  key={circle.from}
+                  href="/circles"
+                  className="reveal"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '14px 0',
+                    borderBottom: i < CIRCLES_DATA.length - 1 ? '1px solid var(--border)' : 'none',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    transition: 'opacity 0.15s',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.65'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
                 >
-                  {code}
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
+                      {circle.from} &rarr; {circle.to}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                      {circle.time} &middot; {circle.riders} riders &middot; save ~{circle.savings}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 16, color: 'var(--text-muted)' }}>&rarr;</span>
                 </Link>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="pb-20">
-          <div className="gs-container">
-            <div className="rounded-[2.5rem] bg-ink-900 px-6 py-12 text-white sm:px-10">
-              <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/55">
-                    Start with a real trip
-                  </p>
-                  <h2 className="mt-4 max-w-3xl text-4xl font-semibold leading-[1.02] tracking-[-0.04em]">
-                    Keep the trip simple. Make the timing legible. Share the ride only if it still makes sense.
-                  </h2>
+        {/* ─── Section D: How It Works ──────────────────────── */}
+        <section
+          ref={observe}
+          className="reveal"
+          style={{ paddingBottom: 96 }}
+        >
+          <div className="gs-container" style={{ maxWidth: 540, margin: '0 auto' }}>
+            <p style={{
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '0.16em',
+              textTransform: 'uppercase',
+              color: 'var(--text-muted)',
+              marginBottom: 24,
+            }}>
+              How it works
+            </p>
+
+            <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {STEPS.map((step, i) => (
+                <div
+                  key={step.num}
+                  className="reveal"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 16,
+                    padding: '16px 0',
+                    borderBottom: i < STEPS.length - 1 ? '1px solid var(--border)' : 'none',
+                  }}
+                >
+                  <span style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: 'var(--accent)',
+                    fontVariantNumeric: 'tabular-nums',
+                    width: 24,
+                    flexShrink: 0,
+                  }}>
+                    {step.num}
+                  </span>
+                  <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--text)' }}>
+                    {step.label}
+                  </span>
                 </div>
-                <Link href="/trip/new" className="gs-btn-primary gap-2 !rounded-full !bg-white !text-ink-900 hover:!bg-white/92">
-                  Plan your trip
-                  <ArrowRight className="h-5 w-5" />
-                </Link>
-              </div>
+              ))}
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-black/6 py-10">
-        <div className="gs-container flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="text-base font-semibold tracking-tight text-ink-900">Boarding</div>
-            <div className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-ink-400">
-              never miss a flight again
+      {/* ─── Footer ──────────────────────────────────────────── */}
+      <footer style={{ borderTop: '1px solid var(--border)', padding: '40px 0' }}>
+        <div className="gs-container" style={{ maxWidth: 540, margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 24 }}>
+            <span className="font-display" style={{ fontSize: 18, fontStyle: 'italic', color: 'var(--text)' }}>
+              Boarding
+            </span>
+            <div style={{ display: 'flex', gap: 20 }}>
+              <Link href="/trip/new" style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', textDecoration: 'none' }}>
+                Plan trip
+              </Link>
+              <Link href="/circles" style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', textDecoration: 'none' }}>
+                Ride circles
+              </Link>
+              <Link href="/styleguide" style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', textDecoration: 'none' }}>
+                Styleguide
+              </Link>
             </div>
           </div>
-          <div className="flex gap-6 text-sm text-ink-500">
-            <Link href="/trip/new" className="transition-colors hover:text-ink-900">Plan trip</Link>
-            <Link href="/circles" className="transition-colors hover:text-ink-900">Ride circles</Link>
-            <Link href="/styleguide" className="transition-colors hover:text-ink-900">Styleguide</Link>
-          </div>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            U.S. airports &middot; Open assumptions
+          </p>
         </div>
       </footer>
+
+      {/* ─── Bottom Tab Bar (visual) ─────────────────────────── */}
+      <nav
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50,
+          background: 'var(--bg-card)',
+          borderTop: '1px solid var(--border)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}
+      >
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          gap: 0,
+          maxWidth: 400,
+          margin: '0 auto',
+        }}>
+          {[
+            { label: 'Home', href: '/', active: true, icon: (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
+            )},
+            { label: 'Trips', href: '/trip/new', active: false, icon: (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />
+              </svg>
+            )},
+            { label: 'Circles', href: '/circles', active: false, icon: (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+            )},
+            { label: 'Profile', href: '/profile', active: false, icon: (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            )},
+          ].map((tab) => (
+            <Link
+              key={tab.label}
+              href={tab.href}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 3,
+                padding: '10px 24px',
+                textDecoration: 'none',
+                minHeight: 44,
+                minWidth: 44,
+                position: 'relative',
+              }}
+            >
+              <span style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tab.active ? 'var(--accent)' : 'var(--text-muted)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  {/* Re-render the icon's inner elements with correct stroke */}
+                </svg>
+                {/* Use the icon directly */}
+                <span style={{ color: tab.active ? 'var(--accent)' : 'var(--text-muted)' }}>
+                  {/* Clone icon with correct stroke */}
+                  <span style={{ display: 'flex' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{
+                      __html: tab.label === 'Home'
+                        ? '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>'
+                        : tab.label === 'Trips'
+                        ? '<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>'
+                        : tab.label === 'Circles'
+                        ? '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'
+                        : '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'
+                    }} />
+                  </span>
+                </span>
+              </span>
+              <span style={{
+                fontSize: 10,
+                fontWeight: tab.active ? 600 : 500,
+                color: tab.active ? 'var(--accent)' : 'var(--text-muted)',
+                letterSpacing: '0.02em',
+              }}>
+                {tab.label}
+              </span>
+              {tab.active && (
+                <span style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: 20,
+                  height: 2,
+                  borderRadius: 1,
+                  background: 'var(--accent)',
+                }} />
+              )}
+            </Link>
+          ))}
+        </div>
+      </nav>
+
+      {/* Bottom spacer for tab bar */}
+      <div style={{ height: 72 }} />
     </div>
   );
 }

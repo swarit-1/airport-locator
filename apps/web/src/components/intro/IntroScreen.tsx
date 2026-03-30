@@ -52,16 +52,16 @@ export function IntroScreen({ onComplete }: IntroScreenProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 cursor-pointer select-none overflow-hidden bg-[#173b87] text-white"
+      className="fixed inset-0 z-50 cursor-pointer select-none overflow-hidden"
+      style={{ background: '#FAFAF8', color: '#1A1A1A' }}
       onClick={skip}
       role="button"
       tabIndex={0}
       aria-label="Skip intro"
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(255,255,255,0.14),transparent_34%),radial-gradient(circle_at_85%_80%,rgba(255,255,255,0.08),transparent_30%)]" />
       <div className="gs-container relative flex min-h-dvh flex-col justify-between py-10 sm:py-12">
-        <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.28em] text-white/62">
-          <span>Boarding</span>
+        <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.28em]" style={{ color: '#9CA3AF' }}>
+          <span className="font-display" style={{ fontSize: 16, fontStyle: 'italic', letterSpacing: '-0.01em', textTransform: 'none', color: '#1A1A1A' }}>Boarding</span>
           <span>never miss a flight again</span>
         </div>
 
@@ -74,7 +74,17 @@ export function IntroScreen({ onComplete }: IntroScreenProps) {
               ease: [0.22, 1, 0.36, 1],
             }}
           >
-            <div className="max-w-4xl text-[clamp(3.5rem,11vw,7.5rem)] font-semibold leading-[0.92] tracking-[-0.05em] text-white/90">
+            <div
+              className="font-display max-w-4xl"
+              style={{
+                fontSize: 'clamp(3.5rem, 11vw, 7.5rem)',
+                fontStyle: 'italic',
+                fontWeight: 400,
+                lineHeight: 0.92,
+                letterSpacing: '-0.02em',
+                color: '#1A1A1A',
+              }}
+            >
               Let&apos;s move
             </div>
           </motion.div>
@@ -87,7 +97,8 @@ export function IntroScreen({ onComplete }: IntroScreenProps) {
               duration: prefersReducedMotion ? 0.14 : 0.45,
               ease: [0.22, 1, 0.36, 1],
             }}
-            className="max-w-sm justify-self-start text-sm leading-relaxed text-white/68 lg:justify-self-end"
+            className="max-w-sm justify-self-start text-sm leading-relaxed lg:justify-self-end"
+            style={{ color: '#9CA3AF' }}
           >
             Flight-aware timing first. Shared rides only if the timing still works for everyone.
           </motion.div>
@@ -97,7 +108,7 @@ export function IntroScreen({ onComplete }: IntroScreenProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: prefersReducedMotion ? 0 : 0.45, duration: 0.25 }}
-          className="text-sm text-white/42"
+          style={{ fontSize: 14, color: '#D4D4D8' }}
         >
           Tap, click, or press Enter to skip
         </motion.div>
