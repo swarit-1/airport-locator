@@ -23,6 +23,7 @@ export const config = {
   providers: {
     googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY ?? '',
     flightAwareApiKey: process.env.FLIGHTAWARE_API_KEY ?? '',
+    aviationStackApiKey: process.env.AVIATIONSTACK_API_KEY ?? '',
     tsaApiKey: process.env.TSA_API_KEY ?? '',
     claudeApiKey: process.env.CLAUDE_API_KEY ?? '',
   },

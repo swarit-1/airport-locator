@@ -21,9 +21,12 @@ export { MockNotificationProvider } from './mock/notification';
 export { MockDiningProvider } from './mock/dining';
 export { MockCheckInProvider } from './mock/checkin';
 
-// Live/scaffolded adapters
+// Live adapters
 export { GoogleRoutesTrafficProvider } from './adapters/google-routes-traffic';
 export { FlightAwareCompatibleFlightProvider } from './adapters/flightaware-compatible';
+export { AviationStackFlightProvider } from './adapters/aviationstack';
+export { GoogleGeocodingProvider } from './adapters/google-geocoding';
+export { HistoricalWaitTimeProvider } from './adapters/tsa-wait-times';
 
 // Recommendation engine
 export { RecommendationEngine } from './engine/recommendation';

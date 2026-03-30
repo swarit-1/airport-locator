@@ -1,11 +1,13 @@
 import { config } from '@boarding/config';
 import {
+  AviationStackFlightProvider,
   FlightAwareCompatibleFlightProvider,
+  GoogleGeocodingProvider,
   GoogleRoutesTrafficProvider,
+  HistoricalWaitTimeProvider,
   MockFlightProvider,
   MockRideLinkProvider,
   MockTrafficProvider,
-  MockWaitTimeProvider,
   RecommendationEngine,
   type FlightProvider,
   type RideLinkProvider,
@@ -24,7 +26,7 @@ type TripProviderSet = {
 export function getServerTripProviders(): TripProviderSet {
   const trafficProvider = getServerTrafficProvider();
   const flightProvider = getServerFlightProvider();
-  const waitTimeProvider = new MockWaitTimeProvider();
+  const waitTimeProvider = getServerWaitTimeProvider();
   const rideLinkProvider = new MockRideLinkProvider();
 
   return {
@@ -41,30 +43,70 @@ export function getServerTripProviders(): TripProviderSet {
 }
 
 export function getServerTrafficProvider(): TrafficProvider {
-  if (config.features.liveTraffic && config.providers.googleMapsApiKey) {
+  if (config.providers.googleMapsApiKey) {
     return new GoogleRoutesTrafficProvider({
       apiKey: config.providers.googleMapsApiKey,
     });
   }
-
   return new MockTrafficProvider();
 }
 
 export function getServerFlightProvider(): FlightProvider {
-  if (config.features.liveFlight && config.providers.flightAwareApiKey) {
+  // Prefer FlightAware if key exists (more reliable)
+  if (config.providers.flightAwareApiKey) {
     return new FlightAwareCompatibleFlightProvider({
       apiKey: config.providers.flightAwareApiKey,
     });
   }
-
+  // Fall back to AviationStack
+  if (config.providers.aviationStackApiKey) {
+    return new AviationStackFlightProvider({
+      apiKey: config.providers.aviationStackApiKey,
+    });
+  }
   return new MockFlightProvider();
 }
 
+/**
+ * Returns a flight provider capable of looking up flights by number only
+ * (without a date). Returns null if no suitable provider is configured.
+ */
+export function getFlightLookupProvider(): AviationStackFlightProvider | null {
+  if (config.providers.aviationStackApiKey) {
+    return new AviationStackFlightProvider({
+      apiKey: config.providers.aviationStackApiKey,
+    });
+  }
+  return null;
+}
+
+export function getServerWaitTimeProvider(): WaitTimeProvider {
+  // Always use historical TSA data — no mock
+  return new HistoricalWaitTimeProvider();
+}
+
+export function getGeocodingProvider(): GoogleGeocodingProvider | null {
+  if (config.providers.googleMapsApiKey) {
+    return new GoogleGeocodingProvider({
+      apiKey: config.providers.googleMapsApiKey,
+    });
+  }
+  return null;
+}
+
 export function getProviderModeSummary() {
+  const hasGoogleKey = !!config.providers.googleMapsApiKey;
+  const hasFlightKey = !!(config.providers.flightAwareApiKey || config.providers.aviationStackApiKey);
+
   return {
-    traffic: config.features.liveTraffic && config.providers.googleMapsApiKey ? 'live' : 'mock',
-    flight: config.features.liveFlight && config.providers.flightAwareApiKey ? 'live' : 'mock',
-    waitTimes: config.features.liveWaitTimes ? 'fallback-chain' : 'mock',
+    traffic: hasGoogleKey ? 'live' : 'mock',
+    flight: config.providers.flightAwareApiKey
+      ? 'live (FlightAware)'
+      : config.providers.aviationStackApiKey
+        ? 'live (AviationStack)'
+        : 'mock',
+    waitTimes: 'historical',
     rideLinks: 'live',
+    geocoding: hasGoogleKey ? 'live' : 'none',
   } as const;
 }

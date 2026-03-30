@@ -121,12 +121,13 @@ export class RecommendationEngine {
       overallConfidence = 'medium';
     }
 
-    const actualDeparture = flightInfo?.estimated_departure
-      ? new Date(flightInfo.estimated_departure)
-      : scheduledDeparture;
-
+    // Always use the user's entered departure time as the baseline.
+    // Only apply the delay offset from the flight provider — don't replace
+    // the departure time entirely (mock providers generate random times).
+    let actualDeparture = scheduledDeparture;
     if (flightInfo?.delay_minutes && flightInfo.delay_minutes > 0) {
-      warnings.push(`Flight is delayed by ${flightInfo.delay_minutes} minutes.`);
+      actualDeparture = new Date(scheduledDeparture.getTime() + flightInfo.delay_minutes * 60_000);
+      warnings.push(`Flight is delayed by ${flightInfo.delay_minutes} minutes. Adjusted departure to account for delay.`);
     }
 
     // 3. Traffic estimate

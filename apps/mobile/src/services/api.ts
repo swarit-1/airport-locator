@@ -100,13 +100,24 @@ export async function computeRecommendation(input: RecommendationRequest) {
 }
 
 export async function resolveFlight(airlineIata: string, flightNumber: string, date: string) {
-  return request<{ flight: any }>('/api/trips/resolve-flight', {
+  return request<{ found: boolean; flight?: any }>('/api/trips/resolve-flight', {
     method: 'POST',
-    body: JSON.stringify({ airline_iata: airlineIata, flight_number: flightNumber, date }),
+    body: JSON.stringify({ airline_iata: airlineIata, flight_number: flightNumber, departure_date: date }),
   });
 }
 
-export async function resolveLocation(params: { mode: string; address?: string; lat?: number; lng?: number }) {
+/**
+ * Look up a flight by IATA flight number (e.g. "AA1234").
+ * Optionally provide a date; if omitted, returns the next upcoming flight.
+ */
+export async function lookupFlight(flightIata: string, departureDate?: string) {
+  return request<{ found: boolean; flight?: any }>('/api/trips/lookup-flight', {
+    method: 'POST',
+    body: JSON.stringify({ flight_iata: flightIata, departure_date: departureDate }),
+  });
+}
+
+export async function resolveLocation(params: { mode: string; query?: string; airport_iata?: string; lat?: number; lng?: number; label?: string }) {
   return request<{ location: any }>('/api/trips/resolve-location', {
     method: 'POST',
     body: JSON.stringify(params),

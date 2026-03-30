@@ -16,7 +16,7 @@ type ResolveDeviceLocationInput = {
 export async function resolveTypedAddress(
   input: ResolveTypedAddressInput,
 ): Promise<ResolvedLocation> {
-  if (config.features.liveTraffic && config.providers.googleMapsApiKey) {
+  if (config.providers.googleMapsApiKey) {
     const live = await geocodeWithGoogle(input.query);
     if (live) {
       return {
@@ -36,7 +36,7 @@ export async function resolveTypedAddress(
 export async function resolveDeviceLocation(
   input: ResolveDeviceLocationInput,
 ): Promise<ResolvedLocation> {
-  if (config.features.liveTraffic && config.providers.googleMapsApiKey) {
+  if (config.providers.googleMapsApiKey) {
     const liveLabel = await reverseGeocodeWithGoogle(input.lat, input.lng);
     if (liveLabel) {
       return {

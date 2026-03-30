@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ChevronLeft, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { getProviderModeSummary } from '@/lib/server/provider-registry';
 
-type ProviderStatus = 'live' | 'mock' | 'fallback-chain';
+type ProviderStatus = 'live' | 'mock' | 'historical' | 'fallback-chain';
 
 interface ProviderInfo {
   name: string;
@@ -14,38 +14,47 @@ interface ProviderInfo {
 
 function getProviderList(): ProviderInfo[] {
   const modes = getProviderModeSummary();
+  const isTrafficLive = modes.traffic === 'live';
+  const isFlightLive = modes.flight !== 'mock';
 
   return [
     {
       name: 'Traffic',
-      adapter: modes.traffic === 'live' ? 'GoogleRoutesTrafficProvider' : 'MockTrafficProvider',
-      status: modes.traffic,
-      notes: modes.traffic === 'live'
+      adapter: isTrafficLive ? 'GoogleRoutesTrafficProvider' : 'MockTrafficProvider',
+      status: isTrafficLive ? 'live' : 'mock',
+      notes: isTrafficLive
         ? 'Live traffic data from Google Routes API.'
-        : 'Haversine + time-of-day heuristic. Set FEATURE_LIVE_TRAFFIC=true and GOOGLE_MAPS_API_KEY to go live.',
-      envVars: ['FEATURE_LIVE_TRAFFIC', 'GOOGLE_MAPS_API_KEY'],
+        : 'Haversine + time-of-day heuristic. Set GOOGLE_MAPS_API_KEY to go live.',
+      envVars: ['GOOGLE_MAPS_API_KEY'],
     },
     {
       name: 'Flight Status',
-      adapter: modes.flight === 'live' ? 'FlightAwareCompatibleFlightProvider' : 'MockFlightProvider',
-      status: modes.flight,
-      notes: modes.flight === 'live'
-        ? 'Live flight data from FlightAware.'
-        : 'Deterministic mock flights. Set FEATURE_LIVE_FLIGHT=true and FLIGHTAWARE_API_KEY to go live.',
-      envVars: ['FEATURE_LIVE_FLIGHT', 'FLIGHTAWARE_API_KEY'],
+      adapter: isFlightLive ? modes.flight : 'MockFlightProvider',
+      status: isFlightLive ? 'live' : 'mock',
+      notes: isFlightLive
+        ? `Live flight data via ${modes.flight}.`
+        : 'Set FLIGHTAWARE_API_KEY or AVIATIONSTACK_API_KEY for live flight lookup.',
+      envVars: ['FLIGHTAWARE_API_KEY', 'AVIATIONSTACK_API_KEY'],
     },
     {
       name: 'Wait Times',
-      adapter: modes.waitTimes === 'mock' ? 'MockWaitTimeProvider' : 'WaitTimeChainProvider',
-      status: modes.waitTimes,
-      notes: modes.waitTimes === 'mock'
-        ? 'Historical airport averages. Enable live wait times for chain: Airport config -> MyTSA -> Crowdsourced -> Historical.'
-        : 'Fallback chain active: Airport config -> MyTSA -> Crowdsourced -> Historical.',
+      adapter: 'HistoricalWaitTimeProvider',
+      status: 'historical',
+      notes: 'Curated per-airport, per-terminal historical TSA wait time estimates with peak/off-peak modeling.',
+    },
+    {
+      name: 'Geocoding',
+      adapter: modes.geocoding === 'live' ? 'GoogleGeocodingProvider' : 'Fallback',
+      status: modes.geocoding === 'live' ? 'live' : 'mock',
+      notes: modes.geocoding === 'live'
+        ? 'Google Geocoding API for address-to-coordinates resolution.'
+        : 'Using deterministic fallback. Set GOOGLE_MAPS_API_KEY for real geocoding.',
+      envVars: ['GOOGLE_MAPS_API_KEY'],
     },
     {
       name: 'Ride Links',
       adapter: 'MockRideLinkProvider',
-      status: modes.rideLinks as ProviderStatus,
+      status: 'live',
       notes: 'Deep links to Uber/Lyft apps. Links work without API keys.',
     },
     {
@@ -68,6 +77,7 @@ const defaultStatus = { icon: AlertTriangle, color: 'text-warning-500', bg: 'bg-
 const statusConfig: Record<string, { icon: typeof CheckCircle2 | typeof AlertTriangle; color: string; bg: string; label: string }> = {
   live: { icon: CheckCircle2, color: 'text-success-500', bg: 'bg-success-50', label: 'Live' },
   mock: { icon: AlertTriangle, color: 'text-warning-500', bg: 'bg-warning-50', label: 'Mock' },
+  historical: { icon: CheckCircle2, color: 'text-brand-500', bg: 'bg-brand-50', label: 'Historical Data' },
   'fallback-chain': { icon: CheckCircle2, color: 'text-brand-500', bg: 'bg-brand-50', label: 'Fallback Chain' },
 };
 

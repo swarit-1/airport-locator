@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, ScrollView, Pressable, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, ScrollView, Pressable, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text, Button, Card, Input, Badge, Divider, themeColors, themeSpacing, themeRadii } from '@boarding/ui-native';
@@ -9,7 +9,7 @@ import * as api from '../services/api';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-type Step = 'airline' | 'flight' | 'origin' | 'preferences' | 'computing' | 'result';
+type Step = 'flight' | 'origin' | 'preferences' | 'computing' | 'result';
 
 interface TripForm {
   airline_iata: string;
@@ -19,6 +19,8 @@ interface TripForm {
   departure_time: string;
   airport_iata: string;
   flight_type: 'domestic' | 'international';
+  terminal: string | null;
+  gate: string | null;
   origin_label: string;
   origin_lat: number;
   origin_lng: number;
@@ -33,6 +35,27 @@ interface TripForm {
   risk_profile: string;
 }
 
+function getTomorrow(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function isValidDate(s: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(new Date(s + 'T00:00:00').getTime());
+}
+
+function isValidTime(s: string): boolean {
+  if (!/^\d{1,2}:\d{2}$/.test(s)) return false;
+  const [h, m] = s.split(':').map(Number);
+  return h! >= 0 && h! <= 23 && m! >= 0 && m! <= 59;
+}
+
+function isDateInPast(dateStr: string): boolean {
+  const today = new Date().toISOString().slice(0, 10);
+  return dateStr < today;
+}
+
 const defaultForm: TripForm = {
   airline_iata: '',
   airline_name: '',
@@ -41,6 +64,8 @@ const defaultForm: TripForm = {
   departure_time: '',
   airport_iata: '',
   flight_type: 'domestic',
+  terminal: null,
+  gate: null,
   origin_label: '',
   origin_lat: 0,
   origin_lng: 0,
@@ -57,42 +82,155 @@ const defaultForm: TripForm = {
 
 export function TripNewScreen() {
   const nav = useNavigation<Nav>();
-  const [step, setStep] = useState<Step>('airline');
+  const [step, setStep] = useState<Step>('flight');
   const [form, setForm] = useState<TripForm>(defaultForm);
-  const [airlineSearch, setAirlineSearch] = useState('');
   const [recommendation, setRecommendation] = useState<any>(null);
   const [error, setError] = useState('');
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupResult, setLookupResult] = useState<string | null>(null);
+  const [geocodeLoading, setGeocodeLoading] = useState(false);
+  const [flightInput, setFlightInput] = useState('');
 
-  const filteredAirlines = useMemo(() => {
-    if (!airlineSearch) return airlineSeeds;
-    const q = airlineSearch.toLowerCase();
-    return airlineSeeds.filter(
-      (a) => a.name.toLowerCase().includes(q) || a.iata_code.toLowerCase().includes(q),
-    );
-  }, [airlineSearch]);
+  // ─── Flight Lookup ─────────────────────────────────────────────────
 
-  function selectAirline(iata: string, name: string) {
-    setForm({ ...form, airline_iata: iata, airline_name: name });
-    setStep('flight');
+  async function handleFlightLookup() {
+    const cleaned = flightInput.trim().toUpperCase().replace(/\s+/g, '');
+    if (cleaned.length < 3) {
+      setError('Enter a flight number (e.g., AA1234)');
+      return;
+    }
+
+    setLookupLoading(true);
+    setError('');
+    setLookupResult(null);
+
+    try {
+      const res = await api.lookupFlight(cleaned);
+      if (res.found && res.flight) {
+        const f = res.flight;
+        // Find matching airline from seeds
+        const airline = airlineSeeds.find((a) => a.iata_code === f.airline_iata);
+
+        setForm({
+          ...form,
+          airline_iata: f.airline_iata,
+          airline_name: airline?.name ?? f.airline_iata,
+          flight_number: f.flight_number,
+          departure_date: f.departure_date,
+          departure_time: f.departure_time,
+          airport_iata: f.airport_iata,
+          terminal: f.terminal ?? null,
+          gate: f.gate ?? null,
+          flight_type: f.flight_type ?? 'domestic',
+        });
+        setLookupResult(`Found: ${f.airline_iata}${f.flight_number} departing ${f.airport_iata} at ${f.departure_time} on ${f.departure_date}${f.terminal ? ` (Terminal ${f.terminal}${f.gate ? `, Gate ${f.gate}` : ''})` : ''}`);
+      } else {
+        setLookupResult(null);
+        setError('Flight not found. Enter details manually below.');
+        // Pre-fill what we can parse from the input
+        const match = cleaned.match(/^([A-Z]{2})(\d+)$/);
+        if (match) {
+          const airline = airlineSeeds.find((a) => a.iata_code === match[1]);
+          setForm({
+            ...form,
+            airline_iata: match[1]!,
+            airline_name: airline?.name ?? match[1]!,
+            flight_number: match[2]!,
+            departure_date: form.departure_date || getTomorrow(),
+            departure_time: form.departure_time || '14:00',
+          });
+        }
+      }
+    } catch (e: any) {
+      setError(e.message ?? 'Lookup failed. Enter details manually.');
+      const match = cleaned.match(/^([A-Z]{2})(\d+)$/);
+      if (match) {
+        const airline = airlineSeeds.find((a) => a.iata_code === match[1]);
+        setForm({
+          ...form,
+          airline_iata: match[1]!,
+          airline_name: airline?.name ?? match[1]!,
+          flight_number: match[2]!,
+          departure_date: form.departure_date || getTomorrow(),
+          departure_time: form.departure_time || '14:00',
+        });
+      }
+    } finally {
+      setLookupLoading(false);
+    }
   }
 
   function handleFlightNext() {
-    if (!form.flight_number || !form.departure_date || !form.departure_time || !form.airport_iata) {
-      setError('Please fill in all flight details');
+    if (!form.airline_iata) {
+      setError('Please look up a flight or select an airline');
+      return;
+    }
+    if (!form.flight_number) {
+      setError('Please enter a flight number');
+      return;
+    }
+    if (!form.departure_date || !form.departure_time) {
+      setError('Departure date and time are required');
+      return;
+    }
+    if (!isValidDate(form.departure_date)) {
+      setError('Date must be in YYYY-MM-DD format (e.g. 2026-03-25)');
+      return;
+    }
+    if (isDateInPast(form.departure_date)) {
+      setError('Departure date cannot be in the past');
+      return;
+    }
+    if (!isValidTime(form.departure_time)) {
+      setError('Time must be in HH:MM format (e.g. 14:30)');
+      return;
+    }
+    if (!form.airport_iata) {
+      setError('Please select a departure airport');
       return;
     }
     setError('');
     setStep('origin');
   }
 
-  function handleOriginNext() {
+  // ─── Origin Geocoding ──────────────────────────────────────────────
+
+  async function handleOriginNext() {
     if (!form.origin_label) {
       setError('Please enter your pickup location');
       return;
     }
+
+    // Geocode the address to get real coordinates
+    if (form.origin_lat === 0 && form.origin_lng === 0) {
+      setGeocodeLoading(true);
+      setError('');
+      try {
+        const res = await api.resolveLocation({
+          mode: 'typed_address',
+          query: form.origin_label,
+          airport_iata: form.airport_iata,
+        });
+        if (res.location) {
+          setForm({
+            ...form,
+            origin_label: res.location.label || form.origin_label,
+            origin_lat: res.location.point.lat,
+            origin_lng: res.location.point.lng,
+          });
+        }
+      } catch {
+        // Non-fatal: we'll use fallback coordinates during computation
+      } finally {
+        setGeocodeLoading(false);
+      }
+    }
+
     setError('');
     setStep('preferences');
   }
+
+  // ─── Compute Recommendation ────────────────────────────────────────
 
   async function handleCompute() {
     setStep('computing');
@@ -152,84 +290,111 @@ export function TripNewScreen() {
       setRecommendation(res.recommendation);
       setStep('result');
     } catch (e: any) {
-      setError(e.message ?? 'Computation failed');
-      setStep('preferences');
+      const msg = e.message ?? 'Computation failed';
+      setError(msg);
+      if (/invalid|date|time/i.test(msg)) {
+        setStep('flight');
+      } else {
+        setStep('preferences');
+      }
     }
   }
 
-  // ─── Step: Airline ──────────────────────────────────────────────────
-
-  if (step === 'airline') {
-    return (
-      <View style={{ flex: 1, backgroundColor: themeColors.surface.secondary }}>
-        <View style={{ paddingHorizontal: themeSpacing[4], paddingTop: themeSpacing[4] }}>
-          <Text variant="h2" style={{ marginBottom: themeSpacing[3] }}>Choose airline</Text>
-          <Input
-            placeholder="Search airlines..."
-            value={airlineSearch}
-            onChangeText={setAirlineSearch}
-          />
-        </View>
-        <FlatList
-          data={filteredAirlines}
-          keyExtractor={(item) => item.iata_code}
-          contentContainerStyle={{ padding: themeSpacing[4], gap: themeSpacing[2] }}
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() => selectAirline(item.iata_code, item.name)}
-              style={({ pressed }) => ({
-                backgroundColor: pressed ? themeColors.brand[50] : themeColors.surface.elevated,
-                padding: themeSpacing[4],
-                borderRadius: themeRadii.lg,
-                flexDirection: 'row' as const,
-                justifyContent: 'space-between' as const,
-                alignItems: 'center' as const,
-              })}
-            >
-              <View>
-                <Text variant="body" weight="semibold">{item.name}</Text>
-                <Text variant="caption" color={themeColors.ink[400]}>{item.iata_code}</Text>
-              </View>
-              <Badge label={item.iata_code} variant="brand" />
-            </Pressable>
-          )}
-        />
-      </View>
-    );
-  }
-
-  // ─── Step: Flight Details ───────────────────────────────────────────
+  // ─── Step: Flight (combined lookup + manual entry) ─────────────────
 
   if (step === 'flight') {
     return (
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView style={{ flex: 1, backgroundColor: themeColors.surface.secondary }} contentContainerStyle={{ padding: themeSpacing[4], gap: themeSpacing[4] }}>
-          <Text variant="h2">Flight details</Text>
-          <Badge label={form.airline_name} variant="brand" />
+          <Text variant="h2">Enter your flight</Text>
 
-          <Input
-            label="Flight Number"
-            placeholder={`${form.airline_iata}123`}
-            value={form.flight_number}
-            onChangeText={(v) => setForm({ ...form, flight_number: v })}
-            autoCapitalize="characters"
-          />
+          {/* Flight lookup */}
+          <Card elevation="raised">
+            <Text variant="h3" style={{ marginBottom: themeSpacing[2] }}>Look Up Flight</Text>
+            <Text variant="caption" color={themeColors.ink[400]} style={{ marginBottom: themeSpacing[3] }}>
+              Enter your flight number and we'll auto-fill everything
+            </Text>
+            <View style={{ flexDirection: 'row', gap: themeSpacing[2], alignItems: 'flex-end' }}>
+              <View style={{ flex: 1 }}>
+                <Input
+                  placeholder="AA1234"
+                  value={flightInput}
+                  onChangeText={setFlightInput}
+                  autoCapitalize="characters"
+                />
+              </View>
+              <Button
+                title={lookupLoading ? '...' : 'Look Up'}
+                onPress={handleFlightLookup}
+                style={{ minWidth: 100 }}
+              />
+            </View>
+            {lookupLoading && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: themeSpacing[2], marginTop: themeSpacing[2] }}>
+                <ActivityIndicator size="small" color={themeColors.brand[500]} />
+                <Text variant="caption" color={themeColors.ink[400]}>Looking up flight...</Text>
+              </View>
+            )}
+            {lookupResult && (
+              <View style={{ marginTop: themeSpacing[2], backgroundColor: themeColors.success[50], padding: themeSpacing[3], borderRadius: themeRadii.md }}>
+                <Text variant="bodySmall" color={themeColors.success[700]}>{lookupResult}</Text>
+              </View>
+            )}
+          </Card>
 
-          <Input
-            label="Departure Date"
-            placeholder="2026-03-25"
-            value={form.departure_date}
-            onChangeText={(v) => setForm({ ...form, departure_date: v })}
-          />
+          <Divider />
 
-          <Input
-            label="Departure Time (airport local)"
-            placeholder="14:30"
-            value={form.departure_time}
-            onChangeText={(v) => setForm({ ...form, departure_time: v })}
-          />
+          {/* Manual entry / edit fields */}
+          <Text variant="h3" color={themeColors.ink[500]}>Flight Details {form.airline_name ? `— ${form.airline_name}` : ''}</Text>
 
-          <Text variant="caption" weight="semibold" color={themeColors.ink[600]} style={{ marginTop: themeSpacing[2] }}>
+          <View style={{ flexDirection: 'row', gap: themeSpacing[2] }}>
+            <View style={{ flex: 1 }}>
+              <Input
+                label="Airline Code"
+                placeholder="AA"
+                value={form.airline_iata}
+                onChangeText={(v) => {
+                  const upper = v.toUpperCase();
+                  const airline = airlineSeeds.find((a) => a.iata_code === upper);
+                  setForm({ ...form, airline_iata: upper, airline_name: airline?.name ?? upper });
+                }}
+                autoCapitalize="characters"
+                maxLength={2}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Input
+                label="Flight #"
+                placeholder="1234"
+                value={form.flight_number}
+                onChangeText={(v) => setForm({ ...form, flight_number: v })}
+                keyboardType="number-pad"
+              />
+            </View>
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: themeSpacing[2] }}>
+            <View style={{ flex: 1 }}>
+              <Input
+                label="Date"
+                placeholder="2026-03-25"
+                value={form.departure_date}
+                onChangeText={(v) => setForm({ ...form, departure_date: v })}
+              />
+              <Text variant="caption" color={themeColors.ink[400]} style={{ marginTop: 2 }}>YYYY-MM-DD</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Input
+                label="Time (local)"
+                placeholder="14:30"
+                value={form.departure_time}
+                onChangeText={(v) => setForm({ ...form, departure_time: v })}
+              />
+              <Text variant="caption" color={themeColors.ink[400]} style={{ marginTop: 2 }}>HH:MM 24h</Text>
+            </View>
+          </View>
+
+          <Text variant="caption" weight="semibold" color={themeColors.ink[600]}>
             Departure Airport
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: themeSpacing[2] }}>
@@ -257,7 +422,14 @@ export function TripNewScreen() {
             ))}
           </View>
 
-          <View style={{ flexDirection: 'row', gap: themeSpacing[2], marginTop: themeSpacing[2] }}>
+          {form.terminal && (
+            <View style={{ flexDirection: 'row', gap: themeSpacing[3] }}>
+              {form.terminal && <Badge label={`Terminal ${form.terminal}`} variant="info" />}
+              {form.gate && <Badge label={`Gate ${form.gate}`} variant="info" />}
+            </View>
+          )}
+
+          <View style={{ flexDirection: 'row', gap: themeSpacing[2] }}>
             {(['domestic', 'international'] as const).map((ft) => (
               <Pressable
                 key={ft}
@@ -281,10 +453,7 @@ export function TripNewScreen() {
 
           {error ? <Text variant="caption" color={themeColors.error[500]}>{error}</Text> : null}
 
-          <View style={{ flexDirection: 'row', gap: themeSpacing[3], marginTop: themeSpacing[2] }}>
-            <Button title="Back" variant="ghost" onPress={() => setStep('airline')} style={{ flex: 1 }} />
-            <Button title="Next" onPress={handleFlightNext} style={{ flex: 1 }} />
-          </View>
+          <Button title="Next" onPress={handleFlightNext} />
         </ScrollView>
       </KeyboardAvoidingView>
     );
@@ -296,16 +465,23 @@ export function TripNewScreen() {
     return (
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView style={{ flex: 1, backgroundColor: themeColors.surface.secondary }} contentContainerStyle={{ padding: themeSpacing[4], gap: themeSpacing[4] }}>
-          <Text variant="h2">Where are you coming from?</Text>
+          <Text variant="h2">Where are you leaving from?</Text>
           <Input
-            label="Pickup Address or Landmark"
+            label="Pickup Address"
             placeholder="123 Main St, Seattle, WA"
             value={form.origin_label}
-            onChangeText={(v) => setForm({ ...form, origin_label: v })}
+            onChangeText={(v) => setForm({ ...form, origin_label: v, origin_lat: 0, origin_lng: 0 })}
           />
           <Text variant="caption" color={themeColors.ink[400]}>
-            Tip: In the full app, you can use your device GPS for automatic location detection.
+            Enter your full address for accurate drive time via Google Maps
           </Text>
+
+          {geocodeLoading && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: themeSpacing[2] }}>
+              <ActivityIndicator size="small" color={themeColors.brand[500]} />
+              <Text variant="caption" color={themeColors.ink[400]}>Geocoding address...</Text>
+            </View>
+          )}
 
           {error ? <Text variant="caption" color={themeColors.error[500]}>{error}</Text> : null}
 
@@ -390,8 +566,10 @@ export function TripNewScreen() {
   if (step === 'computing') {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: themeColors.surface.secondary }}>
+        <ActivityIndicator size="large" color={themeColors.brand[500]} style={{ marginBottom: themeSpacing[4] }} />
         <Text variant="h2" style={{ marginBottom: themeSpacing[2] }}>Computing...</Text>
-        <Text variant="bodySmall" color={themeColors.ink[400]}>Analyzing traffic, security, and airline rules</Text>
+        <Text variant="bodySmall" color={themeColors.ink[400]}>Getting real-time traffic from Google Maps</Text>
+        <Text variant="bodySmall" color={themeColors.ink[400]}>Analyzing security wait times and airline rules</Text>
       </View>
     );
   }
@@ -420,6 +598,11 @@ export function TripNewScreen() {
                 <View style={{ flex: 1 }}>
                   <Text variant="body" weight="medium">{item.label}</Text>
                   <Text variant="caption" color={themeColors.ink[400]}>{item.description}</Text>
+                  {item.source && (
+                    <Text variant="caption" color={themeColors.ink[300]} style={{ fontSize: 10 }}>
+                      Source: {item.source}
+                    </Text>
+                  )}
                 </View>
                 <Text variant="body" weight="bold" color={themeColors.brand[600]}>{item.minutes} min</Text>
               </View>
@@ -447,7 +630,7 @@ export function TripNewScreen() {
 
       <View style={{ gap: themeSpacing[3] }}>
         <Button title="View Trip Details" onPress={() => recommendation && nav.navigate('TripDetail', { id: recommendation.trip_id })} />
-        <Button title="Plan Another Trip" variant="secondary" onPress={() => { setStep('airline'); setForm(defaultForm); setRecommendation(null); }} />
+        <Button title="Plan Another Trip" variant="secondary" onPress={() => { setStep('flight'); setForm(defaultForm); setRecommendation(null); setFlightInput(''); setLookupResult(null); }} />
       </View>
     </ScrollView>
   );
